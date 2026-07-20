@@ -1,10 +1,15 @@
 """工具函数模块：合同类型识别、产品名称型号列解析"""
 
+from __future__ import annotations
+
 import re
 import pandas as pd
 
 # 合同编号正则：匹配 -M/P/S 后跟数字的模式
 CONTRACT_TYPE_PATTERN = re.compile(r'-(M|P|S)\d')
+
+# 合同年份正则：提取第一个 "-" 前的两位数字年份
+CONTRACT_YEAR_PATTERN = re.compile(r'(\d{2})-')
 
 # 合同类型中文映射
 TYPE_LABEL = {
@@ -12,6 +17,30 @@ TYPE_LABEL = {
     "P": "产品",
     "S": "服务",
 }
+
+
+def extract_contract_year(contract_id: str) -> int | None:
+    """
+    从合同编号中提取年份。
+    规则：第一个 "-" 前面的两位数字代表年份，如 "26" → 2026。
+
+    参数:
+        contract_id: 合同编号字符串，如 "AH26-M07-0091"
+
+    返回:
+        四位年份整数，无法识别返回 None
+
+    示例:
+        "AH26-M07-0091" -> 2026
+        "AH18-P03-0012" -> 2018
+    """
+    if pd.isna(contract_id):
+        return None
+    match = CONTRACT_YEAR_PATTERN.search(str(contract_id))
+    if match:
+        yy = int(match.group(1))
+        return 2000 + yy
+    return None
 
 
 def classify_contract(contract_id: str) -> str | None:
@@ -33,6 +62,28 @@ def classify_contract(contract_id: str) -> str | None:
         return None
     match = CONTRACT_TYPE_PATTERN.search(str(contract_id))
     return match.group(1) if match else None
+
+
+# 产品名称需要去掉的前缀，用于归一化
+_PRODUCT_NAME_PREFIXES = ["明御", "明鉴"]
+
+
+def normalize_product_name(name: str) -> str:
+    """
+    归一化产品名称：去掉"明御""明鉴"等品牌前缀，
+    使得"明御综合日志审计平台"和"综合日志审计平台"被视为同一产品。
+
+    参数:
+        name: 原始产品名称
+
+    返回:
+        归一化后的产品名称
+    """
+    name = name.strip()
+    for prefix in _PRODUCT_NAME_PREFIXES:
+        if name.startswith(prefix) and len(name) > len(prefix):
+            return name[len(prefix):].strip()
+    return name
 
 
 def parse_product_lines(cell_value) -> list[dict]:
