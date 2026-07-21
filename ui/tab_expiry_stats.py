@@ -290,7 +290,7 @@ class ExpiryStatsTab:
             tree.heading(col, text=clean, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
             w = self._column_width(col)
-            tree.column(col, anchor="center", width=w, minwidth=min(w, 60))
+            tree.column(col, anchor="center", width=w, minwidth=min(w, 100), stretch=True)
 
         tree.delete(*tree.get_children())
 
@@ -320,12 +320,19 @@ class ExpiryStatsTab:
         return result
 
     def _get_filter_values(self, col: str) -> list[str]:
-        """返回列中所有去重值（非空优先排序）。"""
-        df = self.source_df
-        if df is None or col not in df.columns:
+        """返回当前筛选结果中该列的去重值（考虑其他列已生效的筛选）。"""
+        if self.source_df is None or col not in self.source_df.columns:
             return []
+        # 先应用所有其他列的筛选条件
+        df = self.source_df.copy()
+        for f_col, allowed in self.active_filters.items():
+            if f_col == col or f_col not in df.columns:
+                continue
+            if not allowed:
+                return []
+            ser = df[f_col].fillna("（空）").astype(str)
+            df = df[ser.isin(allowed)]
         vals = df[col].dropna().astype(str).unique().tolist()
-        # 也加入空值
         if df[col].isna().any():
             vals.append("（空）")
         vals = sorted(set(vals), key=lambda x: (x == "（空）", x))
@@ -450,24 +457,24 @@ class ExpiryStatsTab:
     @staticmethod
     def _column_width(col: str) -> int:
         if "编码" in col or "编号" in col:
-            return 220
+            return 240
         if "客户" in col or "单位" in col or "名称" in col:
-            return 200
+            return 220
         if "合同" in col:
-            return 180
+            return 200
         if "型号" in col or "模块" in col:
-            return 160
+            return 180
         if "金额" in col:
-            return 140
+            return 160
         if "跟踪" in col or "接收" in col or "核算" in col:
-            return 110
+            return 140
         if "备注" in col or "原因" in col:
-            return 280
+            return 320
         if "时间" in col:
-            return 120
+            return 150
         if "行业" in col:
-            return 130
-        return 120
+            return 150
+        return 160
 
     # ── 排序 ─────────────────────────────────────────────────
 

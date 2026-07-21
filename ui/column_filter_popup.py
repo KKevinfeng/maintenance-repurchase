@@ -86,8 +86,8 @@ class ColumnFilterPopup:
             )
             cb.pack(anchor=tk.W, pady=1)
 
-        # 点击 X 关闭时也应用筛选
-        win.protocol("WM_DELETE_WINDOW", self._apply)
+        # 点击 X 关闭时丢弃修改，不应用筛选
+        win.protocol("WM_DELETE_WINDOW", win.destroy)
 
         # 计算宽度
         max_len = max((len(str(v)) for v in self.all_values), default=8)
