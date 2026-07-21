@@ -1,11 +1,11 @@
-"""维保复购数据处理程序 - 入口文件"""
+"""合同数据处理工具 - 入口文件"""
 
-import tkinter as tk
+import customtkinter as ctk
 from ui import MaintenanceApp
 
 
 def main():
-    root = tk.Tk()
+    root = ctk.CTk()
     app = MaintenanceApp(root)
     root.mainloop()
 

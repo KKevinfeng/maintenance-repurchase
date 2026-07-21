@@ -1,9 +1,28 @@
-"""工具函数模块：合同类型识别、产品名称型号列解析"""
+"""工具函数模块：合同类型识别、产品名称型号列解析、窗口居中"""
 
 from __future__ import annotations
 
 import re
+import tkinter as tk
 import pandas as pd
+
+
+def center_window(win: tk.Tk | tk.Toplevel, width: int, height: int) -> None:
+    """将窗口定位到屏幕中央。
+
+    参数:
+        win: Tk 或 Toplevel 窗口实例
+        width: 窗口宽度（像素）
+        height: 窗口高度（像素）
+
+    调用时机: 在 win.geometry(...) 之后调用。
+    """
+    win.update_idletasks()
+    sw = win.winfo_screenwidth()
+    sh = win.winfo_screenheight()
+    x = (sw - width) // 2
+    y = (sh - height) // 2
+    win.geometry(f"{width}x{height}+{x}+{y}")
 
 # 合同编号正则：匹配 -M/P/S 后跟数字的模式
 CONTRACT_TYPE_PATTERN = re.compile(r'-(M|P|S)\d')

@@ -23,6 +23,11 @@ def compute_customer_total(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     df["年份"] = df["合同编号*"].apply(extract_contract_year)
 
+    # 剔除无法提取年份的行，并把年份强转为 int，避免 pivot_table
+    # 产生 float 型列名进而与 YEAR_RANGE 类型不一致
+    df = df[df["年份"].notna()]
+    df["年份"] = df["年份"].astype(int)
+
     # 按客户 × 年份透视
     pivot = df.pivot_table(
         values="合同金额（元）*",
@@ -43,14 +48,16 @@ def compute_customer_total(df: pd.DataFrame) -> pd.DataFrame:
     # 合同总金额 = 各年之和
     pivot["合同总金额"] = pivot.sum(axis=1)
 
-    # 列名处理：年份列保持整数，便于排序
-    pivot.columns = [str(col) for col in pivot.columns[: len(YEAR_RANGE)]] + ["合同总金额"]
-
-    # 调整列顺序：客户名称 → 合同总金额 → 2018...2026
+    # 重置索引 → 显式构建结果（年份列固定为字符串）
     pivot = pivot.reset_index()
-    pivot = pivot[["最终客户名称", "合同总金额"] + [str(y) for y in YEAR_RANGE]]
-    pivot = pivot.sort_values("合同总金额", ascending=False).reset_index(drop=True)
-    return pivot
+    result = pd.DataFrame()
+    result["最终客户名称"] = pivot["最终客户名称"]
+    result["合同总金额"] = pivot["合同总金额"]
+    for y in YEAR_RANGE:
+        result[str(y)] = pivot[y]
+
+    result = result.sort_values("合同总金额", ascending=False).reset_index(drop=True)
+    return result
 
 
 def compute_customer_category(df: pd.DataFrame) -> pd.DataFrame:
