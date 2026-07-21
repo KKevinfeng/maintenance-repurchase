@@ -107,7 +107,14 @@ class MaintenanceApp:
         ).pack(side=tk.LEFT, padx=(0, 8))
 
         ctk.CTkButton(
-            btn_row, text="查看报错日志", command=self._view_log,
+            btn_row, text="查看报错日志", command=self._view_error_log,
+            font=FONT_MAIN, width=120, height=32,
+            fg_color="#E0E0E0", text_color="#333333",
+            hover_color="#D0D0D0", corner_radius=6,
+        ).pack(side=tk.LEFT, padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_row, text="查看运行日志", command=self._view_run_log,
             font=FONT_MAIN, width=120, height=32,
             fg_color="#E0E0E0", text_color="#333333",
             hover_color="#D0D0D0", corner_radius=6,
@@ -236,9 +243,13 @@ class MaintenanceApp:
             self.file_path_var.set(filepath)
             self._load_file()
 
-    def _view_log(self):
-        """打开日志查看窗口。"""
-        LogViewer.show(self.root)
+    def _view_error_log(self):
+        """打开报错日志查看窗口。"""
+        LogViewer.show_error(self.root)
+
+    def _view_run_log(self):
+        """打开运行日志查看窗口。"""
+        LogViewer.show_run(self.root)
 
     def _view_starred(self):
         """打开重点客户弹窗，操作后自动同步主界面标星。"""
