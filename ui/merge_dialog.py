@@ -31,6 +31,8 @@ class ProductMergeDialog:
         self.merge_rules: dict[str, set[str]] = {
             k: set(v) for k, v in merge_rules.items()
         }
+        # 记录打开弹窗时已存在的规则，用于二次确认时区分"本次新增"
+        self._initial_rule_keys = set(self.merge_rules.keys())
         self.on_apply = on_apply
 
         self._build()
@@ -358,12 +360,14 @@ class ProductMergeDialog:
     def _apply(self):
         # 释放 grab 后销毁对话框，再回调主窗口刷新
         rules = dict(self.merge_rules)
-        if rules:
+        new_rule_keys = self.merge_rules.keys() - self._initial_rule_keys
+        if new_rule_keys:
             lines = []
-            for display_name, names in rules.items():
+            for display_name in sorted(new_rule_keys):
+                names = self.merge_rules[display_name]
                 lines.append(f"• {display_name}")
                 lines.append("  " + "、".join(sorted(names)))
-            message = "本次将应用以下产品合并规则：\n\n" + "\n".join(lines)
+            message = "本次新增的产品合并规则：\n\n" + "\n".join(lines)
             if not messagebox.askyesno("确认应用", message):
                 return
         self.win.grab_release()
