@@ -358,6 +358,14 @@ class ProductMergeDialog:
     def _apply(self):
         # 释放 grab 后销毁对话框，再回调主窗口刷新
         rules = dict(self.merge_rules)
+        if rules:
+            lines = []
+            for display_name, names in rules.items():
+                lines.append(f"• {display_name}")
+                lines.append("  " + "、".join(sorted(names)))
+            message = "本次将应用以下产品合并规则：\n\n" + "\n".join(lines)
+            if not messagebox.askyesno("确认应用", message):
+                return
         self.win.grab_release()
         self.win.destroy()
         self.on_apply(rules)
