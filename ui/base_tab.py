@@ -50,13 +50,15 @@ class BaseTab:
 
         tree = ttk.Treeview(frame, columns=self.columns, show="headings", height=20)
 
-        for col in self.columns:
+        for i, col in enumerate(self.columns):
             tree.heading(col, text=col, anchor="center")
             tree.heading(
                 col, command=lambda c=col: self._on_header_click(c)
             )
             w = self._column_width(col)
-            tree.column(col, anchor="center", width=w, minwidth=min(w, 90))
+            # 最后一列自动拉伸，填充满 Treeview 剩余空间
+            stretch = (i == len(self.columns) - 1)
+            tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=stretch)
 
         tree["show"] = ""  # 初始状态隐藏表头
 
@@ -177,11 +179,14 @@ class BaseTab:
         tree.heading(self.SEQ_COL, text="#", anchor="center")
         tree.column(self.SEQ_COL, anchor="center", width=50, minwidth=50)
 
-        for col in df.columns:
+        data_cols = list(df.columns)
+        for i, col in enumerate(data_cols):
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
             w = self._column_width(col)
-            tree.column(col, anchor="center", width=w, minwidth=min(w, 90))
+            # 最后一列自动拉伸，填充满 Treeview 剩余空间
+            stretch = (i == len(data_cols) - 1)
+            tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=stretch)
 
     # ── 排序 ─────────────────────────────────────────────────
 
