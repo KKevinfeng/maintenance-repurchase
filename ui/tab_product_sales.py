@@ -10,7 +10,7 @@ import customtkinter as ctk
 from ui.base_tab import BaseTab
 from data_processor import compute_product_sales, get_product_p_contracts
 from ui.merge_dialog import ProductMergeDialog
-from ui.logger import log_error
+from ui.logger import log_error, log_info
 from utils import center_window, export_to_csv
 from ui.styles import FONT_TITLE, FONT_BOLD
 
