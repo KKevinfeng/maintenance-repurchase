@@ -336,8 +336,8 @@ class ProductMergeDialog:
                 )
                 return
 
-        # 二次确认：列出本次勾选的产品名
-        msg_names = "、".join(names)
+        # 二次确认：列出本次勾选的产品名（每行一个，更直观）
+        msg_names = "\n".join(f"  • {name}" for name in names)
         message = f"确认将以下产品合并为「{display_name}」：\n\n{msg_names}"
         if not messagebox.askyesno("确认添加规则", message):
             return
@@ -349,6 +349,13 @@ class ProductMergeDialog:
         self._refresh_rules()
 
     def _delete_rule(self, display_name):
+        names = self.merge_rules.get(display_name, set())
+        msg_names = "\n".join(f"  • {name}" for name in sorted(names)) if names else ""
+        message = f"确定要删除合并规则「{display_name}」吗？"
+        if msg_names:
+            message += f"\n\n该规则包含以下产品：\n{msg_names}"
+        if not messagebox.askyesno("确认删除规则", message):
+            return
         del self.merge_rules[display_name]
         log_info(f"产品合并规则删除: {display_name}")
         self._refresh_rules()
