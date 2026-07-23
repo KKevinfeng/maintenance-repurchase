@@ -292,23 +292,29 @@ class MaintenanceApp:
             anchor="w", justify="left",
         ).pack(anchor="w", pady=(0, 6), fill=tk.X)
 
-        src_label = ctk.CTkLabel(
-            frame, text="源代码：https://github.com/KKevinfeng/maintenance-repurchase.git",
-            font=FONT_MAIN, anchor="w", justify="left",
-            text_color="#1F6AA5", wraplength=460,
+        # 源代码行：标题 + 可点击 URL
+        src_row = ctk.CTkFrame(frame, fg_color="transparent")
+        src_row.pack(anchor="w", pady=(0, 6), fill=tk.X)
+        ctk.CTkLabel(src_row, text="源代码：", font=FONT_MAIN, anchor="w").pack(side=tk.LEFT)
+        src_link = ctk.CTkLabel(
+            src_row, text="https://github.com/KKevinfeng/maintenance-repurchase.git",
+            font=FONT_MAIN, anchor="w", text_color="#1F6AA5", wraplength=400,
         )
-        src_label.pack(anchor="w", pady=(0, 6), fill=tk.X)
-        src_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/KKevinfeng/maintenance-repurchase.git"))
-        self._bind_hover(src_label)
+        src_link.pack(side=tk.LEFT)
+        src_link.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/KKevinfeng/maintenance-repurchase.git"))
+        self._bind_hover(src_link)
 
-        home_label = ctk.CTkLabel(
-            frame, text="主页：https://kkevinfeng.github.io/",
-            font=FONT_MAIN, anchor="w", justify="left",
-            text_color="#1F6AA5", wraplength=460,
+        # 主页行：标题 + 可点击 URL
+        home_row = ctk.CTkFrame(frame, fg_color="transparent")
+        home_row.pack(anchor="w", pady=(0, 6), fill=tk.X)
+        ctk.CTkLabel(home_row, text="主页：", font=FONT_MAIN, anchor="w").pack(side=tk.LEFT)
+        home_link = ctk.CTkLabel(
+            home_row, text="https://kkevinfeng.github.io/",
+            font=FONT_MAIN, anchor="w", text_color="#1F6AA5", wraplength=400,
         )
-        home_label.pack(anchor="w", pady=(0, 6), fill=tk.X)
-        home_label.bind("<Button-1>", lambda e: webbrowser.open("https://kkevinfeng.github.io/"))
-        self._bind_hover(home_label)
+        home_link.pack(side=tk.LEFT)
+        home_link.bind("<Button-1>", lambda e: webbrowser.open("https://kkevinfeng.github.io/"))
+        self._bind_hover(home_link)
 
     @staticmethod
     def _bind_hover(label) -> None:
