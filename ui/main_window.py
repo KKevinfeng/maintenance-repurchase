@@ -64,10 +64,20 @@ class MaintenanceApp:
         card = ctk.CTkFrame(outer, corner_radius=10)
         card.pack(fill=tk.X, ipady=6)
 
+        title_row = ctk.CTkFrame(card, fg_color="transparent")
+        title_row.pack(fill=tk.X, padx=16, pady=(10, 4))
+
         ctk.CTkLabel(
-            card, text="数据文件", font=FONT_TITLE,
+            title_row, text="数据文件", font=FONT_TITLE,
             text_color="#1F6AA5",
-        ).pack(anchor=tk.W, padx=16, pady=(10, 4))
+        ).pack(side=tk.LEFT)
+
+        ctk.CTkButton(
+            title_row, text="关于", command=self._show_about,
+            font=FONT_SMALL, width=50, height=24,
+            fg_color="#1F6AA5", hover_color="#155485",
+            text_color="white", corner_radius=6,
+        ).pack(side=tk.RIGHT)
 
         row = ctk.CTkFrame(card, fg_color="transparent")
         row.pack(fill=tk.X, padx=16, pady=(0, 6))
@@ -252,6 +262,43 @@ class MaintenanceApp:
     def _view_run_log(self):
         """打开运行日志查看窗口。"""
         LogViewer.show_run(self.root)
+
+    def _show_about(self):
+        """显示关于弹窗。"""
+        win = ctk.CTkToplevel(self.root)
+        win.title("关于")
+        win.geometry("420x220")
+        win.resizable(False, False)
+        win.transient(self.root)
+        win.grab_set()
+        center_window(win, 420, 220)
+
+        frame = ctk.CTkFrame(win, fg_color="transparent")
+        frame.pack(fill=tk.BOTH, expand=True, padx=24, pady=24)
+
+        ctk.CTkLabel(
+            frame, text="合同数据处理工具",
+            font=FONT_TITLE, text_color="#1F6AA5",
+        ).pack(pady=(0, 16))
+
+        info_lines = [
+            "版本信息：2.1.3",
+            "制作人：Kevin",
+            "源代码：https://github.com/KKevinfeng/maintenance-repurchase.git",
+            "主页：https://kkevinfeng.github.io/",
+        ]
+        for line in info_lines:
+            ctk.CTkLabel(
+                frame, text=line, font=FONT_MAIN,
+                anchor="w", justify="left",
+            ).pack(anchor="w", pady=(0, 6), fill=tk.X)
+
+        ctk.CTkButton(
+            win, text="确定", command=win.destroy,
+            font=FONT_MAIN, width=80, height=32,
+            fg_color="#1F6AA5", hover_color="#155485",
+            corner_radius=6,
+        ).pack(pady=(0, 16))
 
     def _view_starred(self):
         """打开重点客户弹窗，操作后自动同步主界面标星。"""
