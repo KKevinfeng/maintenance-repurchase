@@ -5,6 +5,7 @@ from __future__ import annotations
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import webbrowser
 import pandas as pd
 import customtkinter as ctk
 
@@ -281,17 +282,40 @@ class MaintenanceApp:
             font=FONT_TITLE, text_color="#1F6AA5",
         ).pack(pady=(0, 16))
 
-        info_lines = [
-            "版本信息：2.1.3",
-            "制作人：Kevin",
-            "源代码：https://github.com/KKevinfeng/maintenance-repurchase.git",
-            "主页：https://kkevinfeng.github.io/",
-        ]
-        for line in info_lines:
-            ctk.CTkLabel(
-                frame, text=line, font=FONT_MAIN,
-                anchor="w", justify="left", wraplength=460,
-            ).pack(anchor="w", pady=(0, 6), fill=tk.X)
+        ctk.CTkLabel(
+            frame, text="版本信息：2.1.3", font=FONT_MAIN,
+            anchor="w", justify="left",
+        ).pack(anchor="w", pady=(0, 6), fill=tk.X)
+
+        ctk.CTkLabel(
+            frame, text="制作人：Kevin", font=FONT_MAIN,
+            anchor="w", justify="left",
+        ).pack(anchor="w", pady=(0, 6), fill=tk.X)
+
+        src_label = ctk.CTkLabel(
+            frame, text="源代码：https://github.com/KKevinfeng/maintenance-repurchase.git",
+            font=FONT_MAIN, anchor="w", justify="left",
+            text_color="#1F6AA5", wraplength=460,
+        )
+        src_label.pack(anchor="w", pady=(0, 6), fill=tk.X)
+        src_label.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/KKevinfeng/maintenance-repurchase.git"))
+        self._bind_hover(src_label)
+
+        home_label = ctk.CTkLabel(
+            frame, text="主页：https://kkevinfeng.github.io/",
+            font=FONT_MAIN, anchor="w", justify="left",
+            text_color="#1F6AA5", wraplength=460,
+        )
+        home_label.pack(anchor="w", pady=(0, 6), fill=tk.X)
+        home_label.bind("<Button-1>", lambda e: webbrowser.open("https://kkevinfeng.github.io/"))
+        self._bind_hover(home_label)
+
+    @staticmethod
+    def _bind_hover(label) -> None:
+        """为标签添加鼠标悬停效果（模拟超链接）。"""
+        label.configure(cursor="hand2")
+        label.bind("<Enter>", lambda e: label.configure(text_color="#155485"))
+        label.bind("<Leave>", lambda e: label.configure(text_color="#1F6AA5"))
 
     def _view_starred(self):
         """打开重点客户弹窗，操作后自动同步主界面标星。"""
