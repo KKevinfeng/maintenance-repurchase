@@ -267,11 +267,11 @@ class MaintenanceApp:
         """显示关于弹窗。"""
         win = ctk.CTkToplevel(self.root)
         win.title("关于")
-        win.geometry("520x260")
+        win.geometry("520x220")
         win.resizable(False, False)
         win.transient(self.root)
         win.grab_set()
-        center_window(win, 520, 260)
+        center_window(win, 520, 220)
 
         frame = ctk.CTkFrame(win, fg_color="transparent")
         frame.pack(fill=tk.BOTH, expand=True, padx=24, pady=24)
@@ -292,13 +292,6 @@ class MaintenanceApp:
                 frame, text=line, font=FONT_MAIN,
                 anchor="w", justify="left", wraplength=460,
             ).pack(anchor="w", pady=(0, 6), fill=tk.X)
-
-        ctk.CTkButton(
-            win, text="确定", command=win.destroy,
-            font=FONT_MAIN, width=80, height=32,
-            fg_color="#1F6AA5", hover_color="#155485",
-            corner_radius=6,
-        ).pack(pady=(0, 16))
 
     def _view_starred(self):
         """打开重点客户弹窗，操作后自动同步主界面标星。"""
