@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import tkinter as tk
 import customtkinter as ctk
+from ui.logger import log_info
 from ui.starred_cache import StarredCache
 from utils import center_window
 
@@ -171,6 +172,7 @@ class StarredInputDialog:
         """执行导入。"""
         if self._new_names:
             self.starred_cache.add_batch(self._new_names)
+            log_info(f"手动导入重点客户，共 {len(self._new_names)} 个: {self._new_names}")
         self.win.destroy()
         if self.on_done:
             self.on_done(len(self._new_names))

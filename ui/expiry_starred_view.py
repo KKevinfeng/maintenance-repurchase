@@ -7,6 +7,7 @@ from tkinter import ttk
 import pandas as pd
 import customtkinter as ctk
 
+from ui.logger import log_info
 from ui.styles import FONT_MAIN, FONT_TITLE, FONT_SMALL
 from ui.column_filter_popup import ColumnFilterPopup
 from utils import center_window, export_to_csv
@@ -361,6 +362,7 @@ class ExpiryStarredView:
             from tkinter import messagebox
             messagebox.showwarning("提示", "没有数据可导出")
             return
+        log_info(f"导出CSV [重点客户过保合同]: 重点客户过保合同.csv，共 {len(df)} 行")
         export_to_csv(df, self.win, "重点客户过保合同.csv")
 
     # ── 入口 ─────────────────────────────────────────────────

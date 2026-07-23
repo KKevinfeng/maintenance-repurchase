@@ -7,6 +7,7 @@ from tkinter import ttk
 import pandas as pd
 import customtkinter as ctk
 
+from ui.logger import log_info
 from utils import export_to_csv
 
 
@@ -87,6 +88,7 @@ class BaseTab:
             corner_radius=6,
         ).pack(side=tk.RIGHT, padx=4, pady=4)
 
+        self._btn_bar = btn_bar  # 暴露给子类添加额外按钮
         self.frame = frame
         self.tree = tree
         return frame
@@ -194,11 +196,14 @@ class BaseTab:
         if df is None or col not in df.columns:
             return
 
+        direction = "降序" if not self.sort_asc else "升序"
         if self.sort_col == col:
             self.sort_asc = not self.sort_asc
+            direction = "升序" if self.sort_asc else "降序"
         else:
             self.sort_col = col
             self.sort_asc = True
+        log_info(f"排序 [{self.tab_name}]: {col} {direction}")
 
         sorted_df = df.sort_values(col, ascending=self.sort_asc).reset_index(drop=True)
         self._fill_tree(sorted_df)
@@ -257,4 +262,5 @@ class BaseTab:
             from tkinter import messagebox
             messagebox.showwarning("提示", "没有数据可导出")
             return
+        log_info(f"导出CSV [{self.tab_name}]: {self.tab_name}.csv，共 {len(self.source_df)} 行")
         export_to_csv(self.source_df, self.frame, f"{self.tab_name}.csv")

@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 import pandas as pd
 
+from ui.logger import log_error
+
 _CACHE_FILE = os.path.join(os.path.dirname(__file__), "..", "starred_customers.xlsx")
 _COLUMNS = ["序号", "最终客户名称"]
 
@@ -19,15 +21,22 @@ class StarredCache:
 
     def _read(self) -> pd.DataFrame:
         """读取缓存文件，不存在则返回空 DataFrame。"""
-        if not os.path.exists(self._cache_path):
+        try:
+            if not os.path.exists(self._cache_path):
+                return pd.DataFrame(columns=_COLUMNS)
+            return pd.read_excel(self._cache_path)
+        except Exception as e:
+            log_error(f"读取标星缓存文件失败: {e}")
             return pd.DataFrame(columns=_COLUMNS)
-        return pd.read_excel(self._cache_path)
 
     def _write(self, df: pd.DataFrame) -> None:
         """写入缓存文件并重新编号。"""
-        df = df.reset_index(drop=True)
-        df["序号"] = range(1, len(df) + 1)
-        df.to_excel(self._cache_path, index=False)
+        try:
+            df = df.reset_index(drop=True)
+            df["序号"] = range(1, len(df) + 1)
+            df.to_excel(self._cache_path, index=False)
+        except Exception as e:
+            log_error(f"写入标星缓存文件失败: {e}")
 
     # ── 公共接口 ────────────────────────────────────────────
 

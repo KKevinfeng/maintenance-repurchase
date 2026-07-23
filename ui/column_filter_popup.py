@@ -101,8 +101,9 @@ class ColumnFilterPopup:
             px = parent.winfo_rootx()
             py = parent.winfo_rooty()
             win.geometry(f"{win_w}x{win_h}+{px}+{py + 40}")
-        except Exception:
-            pass
+        except Exception as e:
+            from ui.logger import log_error
+            log_error(f"筛选弹窗定位失败: {e}")
 
     def _select_all(self):
         self.selected = set(self.all_values)

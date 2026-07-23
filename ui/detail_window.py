@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk
 import pandas as pd
 import customtkinter as ctk
+from ui.logger import log_info
 from ui.styles import FONT_TITLE, FONT_BOLD
 from utils import center_window, export_to_csv
 
@@ -173,4 +174,5 @@ class CustomerDetailWindow:
             messagebox.showwarning("提示", "没有数据可导出")
             return
         name = getattr(self, "_export_name", "客户")
+        log_info(f"导出CSV [客户详情]: 合同详情_{name}.csv，共 {len(df)} 行")
         export_to_csv(df, self._win, f"合同详情_{name}.csv")

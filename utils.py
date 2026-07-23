@@ -84,26 +84,7 @@ def classify_contract(contract_id: str) -> str | None:
     return match.group(1) if match else None
 
 
-# 产品名称需要去掉的前缀，用于归一化
-_PRODUCT_NAME_PREFIXES = ["明御", "明鉴"]
 
-
-def normalize_product_name(name: str) -> str:
-    """
-    归一化产品名称：去掉"明御""明鉴"等品牌前缀，
-    使得"明御综合日志审计平台"和"综合日志审计平台"被视为同一产品。
-
-    参数:
-        name: 原始产品名称
-
-    返回:
-        归一化后的产品名称
-    """
-    name = name.strip()
-    for prefix in _PRODUCT_NAME_PREFIXES:
-        if name.startswith(prefix) and len(name) > len(prefix):
-            return name[len(prefix):].strip()
-    return name
 
 
 def parse_product_lines(cell_value) -> list[dict]:
@@ -142,6 +123,8 @@ def parse_product_lines(cell_value) -> list[dict]:
                 qty = int(float(parts[2]))
                 results.append({"name": parts[0], "model": parts[1], "qty": qty})
             except (ValueError, IndexError):
+                from ui.logger import log_error
+                log_error(f"解析产品行数量失败(3段格式): {line}")
                 continue
         elif len(parts) == 2:
             # 产品名称 | 数量（无型号）
@@ -149,6 +132,8 @@ def parse_product_lines(cell_value) -> list[dict]:
                 qty = int(float(parts[1]))
                 results.append({"name": parts[0], "model": None, "qty": qty})
             except (ValueError, IndexError):
+                from ui.logger import log_error
+                log_error(f"解析产品行数量失败(2段格式): {line}")
                 continue
         # 其他格式（1段或>3段）跳过
 
@@ -177,6 +162,10 @@ def export_to_csv(df: pd.DataFrame, parent: tk.Misc, default_filename: str = "ex
     if filepath:
         try:
             df.to_csv(filepath, index=False, encoding="utf-8-sig")
+            from ui.logger import log_info
+            log_info(f"导出 CSV 成功: {filepath}，共 {len(df)} 行")
             messagebox.showinfo("导出成功", f"已成功导出到：\n{filepath}")
         except Exception as e:
+            from ui.logger import log_error
+            log_error(f"导出 CSV 失败: {e}")
             messagebox.showerror("导出失败", f"导出 CSV 文件失败：\n{e}")

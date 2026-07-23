@@ -12,7 +12,7 @@ from ui.styles import (
     FONT_MAIN, FONT_SMALL, FONT_BOLD, FONT_TITLE,
     setup_treeview_style,
 )
-from ui.logger import log_error
+from ui.logger import log_error, log_info
 from ui.log_view import LogViewer
 from ui.base_tab import BaseTab
 from ui.tab_customer_total import CustomerTotalTab
@@ -172,6 +172,7 @@ class MaintenanceApp:
         self.tab_product_sales = ProductSalesTab(
             self.tab_content,
             on_double_click=None,
+            on_data_change=self._on_product_sales_data_change,
         )
 
         self.tabs = [
@@ -188,6 +189,7 @@ class MaintenanceApp:
 
     def _switch_tab(self, name: str):
         """切换 Tab 页并更新按钮样式。"""
+        log_info(f"切换 Tab: {name}")
         for tab in self.tabs:
             tab.frame.pack_forget()
         self.tab_expiry_stats.frame.pack_forget()
@@ -280,8 +282,10 @@ class MaintenanceApp:
         """标星切换回调：更新缓存。"""
         if is_starred:
             self.starred_cache.add(customer_name)
+            log_info(f"标星客户: {customer_name}")
         else:
             self.starred_cache.remove(customer_name)
+            log_info(f"取消标星客户: {customer_name}")
 
     def _get_starred_names(self) -> list[str]:
         """供 Tab 获取当前标星客户名称列表。"""
@@ -328,6 +332,7 @@ class MaintenanceApp:
                 )
                 self._load_df = result_df
 
+                log_info(f"数据文件加载成功: {filepath}，共 {len(result_df)} 行")
                 results = []
                 for i, tab in enumerate(self.tabs):
                     computed = tab.compute_data(result_df)
@@ -404,10 +409,29 @@ class MaintenanceApp:
             for tab in self.tabs:
                 computed = tab.compute_data(self.df)
                 tab.populate(computed)
+            log_info(f"数据已刷新 — 共 {len(self.df)} 行合同数据")
             self.status_var.set(f"数据已刷新 — 共 {len(self.df)} 行合同数据")
         except Exception as e:
             log_error("数据处理失败")
             messagebox.showerror("错误", f"数据处理失败：\n{e}")
+
+    def _on_product_sales_data_change(self):
+        """产品名称合并规则变化后，仅刷新产品销量 Tab。"""
+        if self.df is None:
+            return
+        try:
+            computed = self.tab_product_sales.compute_data(self.df)
+            self.tab_product_sales.populate(computed)
+            self.tab_content.update_idletasks()
+            rule_count = len(self.tab_product_sales.merge_rules)
+            self.status_var.set(
+                f"产品合并规则已应用（{rule_count} 条）— 共 {len(self.df)} 行合同数据"
+            )
+            log_info(f"产品合并规则已应用，共 {rule_count} 条")
+            self._switch_tab(self.tab_names[3])  # 自动切到产品销量统计页
+        except Exception as e:
+            log_error("产品合并刷新失败")
+            messagebox.showerror("错误", f"刷新产品销量数据失败：\n{e}")
 
     # ── 双击事件（各 Tab） ────────────────────────────────────
 
@@ -481,4 +505,5 @@ class MaintenanceApp:
         else:
             title_text = f'客户：{customer_name}（共 {len(customer_df)} 条合同）'
 
+        log_info(f"查看客户详情: {customer_name}，共 {len(customer_df)} 条合同")
         CustomerDetailWindow(self.root, customer_df, title_text, customer_name)

@@ -6,6 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import customtkinter as ctk
 
+from ui.logger import log_info
 from ui.styles import FONT_MAIN, FONT_TITLE
 from utils import center_window, export_to_csv
 
@@ -157,6 +158,7 @@ class StarredView:
         )
         if confirmed:
             self.cache.remove(name)
+            log_info(f"重点客户删除: {name}")
             self._dirty = True
             self._refresh_table()
 
@@ -174,6 +176,7 @@ class StarredView:
         )
         if confirmed:
             self.cache.clear_all()
+            log_info(f"重点客户全部清空，共 {count} 个")
             self._dirty = True
             self._refresh_table()
 
@@ -186,6 +189,7 @@ class StarredView:
             from tkinter import messagebox
             messagebox.showwarning("提示", "没有数据可导出")
             return
+        log_info(f"导出CSV [重点客户]: 重点客户.csv，共 {len(df)} 行")
         export_to_csv(df, self.win, "重点客户.csv")
 
     # ── 入口 ─────────────────────────────────────────────────

@@ -1,3 +1,27 @@
+2026年7月23日 更新日志 — v2.1.1
+
+【优化功能】
+
+合同年份列自动识别（Tab1）
+- 年份列不再硬编码为 2018~2026，改为根据导入数据的合同编号自动提取
+- 合同编号第一个"-"前的两位数字代表年份（如"AH11-P11-015"→2011年）
+- 年份按倒序排列，最近年份在前，方便快速查看
+
+运行日志全覆盖
+- 新增操作日志记录：数据导入/导出、Tab 切换、标星/取消标星、排序、筛选、产品合并规则增删
+- 新增操作日志记录：重点客户手动导入/删除/清空、客户详情查看、产品合同查询
+- 所有 try/except 均接入 log_error，消除静默吞异常
+- 涉及文件：main_window.py、base_tab.py、tab_expiry_stats.py、tab_product_sales.py、merge_dialog.py、starred_view.py、starred_input_dialog.py、detail_window.py、expiry_starred_view.py、starred_cache.py、column_filter_popup.py、utils.py
+
+【错误修复】
+- 修复 starred_cache.py 标星缓存文件读写异常时未记录日志的问题
+- 修复 tab_expiry_stats.py 过保数据加载失败时未记录日志的问题
+- 修复 tab_product_sales.py 产品合并规则加载/保存失败时静默 pass 的问题
+- 修复 column_filter_popup.py 筛选弹窗定位失败时静默 pass 的问题
+- 修复 utils.py 产品数量解析失败时静默跳过、CSV 导出失败时未记录日志的问题
+
+---
+
 2026年7月22日 更新日志 — v2.1.0
 
 【新增功能】

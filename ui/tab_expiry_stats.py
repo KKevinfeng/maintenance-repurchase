@@ -12,6 +12,7 @@ from ui.styles import FONT_MAIN, FONT_SMALL, FONT_TITLE, setup_treeview_style
 from ui.expiry_starred_view import ExpiryStarredView
 from ui.progress_popup import ProgressPopup
 from ui.column_filter_popup import ColumnFilterPopup
+from ui.logger import log_error, log_info
 from utils import classify_contract, center_window, export_to_csv
 
 
@@ -138,12 +139,16 @@ class ExpiryStatsTab:
             try:
                 df = pd.read_excel(filepath)
                 if df.empty:
+                    log_error(f"过保情况文件内容为空: {filepath}")
                     self._load_error = "文件内容为空"
                     return
+                log_info(f"过保情况文件加载成功: {filepath}，共 {len(df)} 行")
                 self._load_df = df
             except FileNotFoundError:
+                log_error(f"加载过保情况文件失败：文件不存在 - {filepath}")
                 self._load_error = f"文件不存在：\n{filepath}"
             except Exception as e:
+                log_error(f"加载过保情况文件失败: {e}")
                 self._load_error = f"加载文件失败：\n{e}"
 
         thread = threading.Thread(target=worker, daemon=True)
@@ -175,6 +180,7 @@ class ExpiryStatsTab:
         self._fill_tree(self._load_df)
         self._build_filter_bar()
         popup.close()
+        log_info(f"过保情况表格渲染完成，共 {len(self._load_df)} 行")
 
     # ── 筛选重点客户过保合同 ─────────────────────────────────
 
@@ -409,6 +415,7 @@ class ExpiryStatsTab:
     def _apply_filter(self, col: str, selected: set):
         """应用筛选并刷新表格。"""
         self.active_filters[col] = selected
+        log_info(f"过保情况筛选: {col} 选中 {len(selected)} 项")
         # 筛选变化时取消排序
         self.sort_col = None
         self.sort_asc = True
@@ -418,6 +425,7 @@ class ExpiryStatsTab:
     def _clear_filters(self):
         """清除所有筛选条件。"""
         self.active_filters.clear()
+        log_info("过保情况: 清除所有筛选条件")
         self.sort_col = None
         self.sort_asc = True
         self._fill_tree(self.source_df)
@@ -501,11 +509,14 @@ class ExpiryStatsTab:
         if display_df is None or col not in display_df.columns:
             return
 
+        direction = "降序" if not self.sort_asc else "升序"
         if self.sort_col == col:
             self.sort_asc = not self.sort_asc
+            direction = "降序" if not self.sort_asc else "升序"
         else:
             self.sort_col = col
             self.sort_asc = True
+        log_info(f"排序 [过保情况]: {col} {direction}")
 
         sorted_df = display_df.sort_values(col, ascending=self.sort_asc).reset_index(drop=True)
         self._fill_tree(sorted_df)
@@ -518,4 +529,5 @@ class ExpiryStatsTab:
         if df is None or df.empty:
             messagebox.showwarning("提示", "没有数据可导出")
             return
+        log_info(f"导出CSV [过保情况]: 过保情况统计.csv，共 {len(df)} 行")
         export_to_csv(df, self.frame, "过保情况统计.csv")
