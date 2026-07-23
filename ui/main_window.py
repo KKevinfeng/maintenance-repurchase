@@ -267,11 +267,11 @@ class MaintenanceApp:
         """显示关于弹窗。"""
         win = ctk.CTkToplevel(self.root)
         win.title("关于")
-        win.geometry("420x220")
+        win.geometry("520x260")
         win.resizable(False, False)
         win.transient(self.root)
         win.grab_set()
-        center_window(win, 420, 220)
+        center_window(win, 520, 260)
 
         frame = ctk.CTkFrame(win, fg_color="transparent")
         frame.pack(fill=tk.BOTH, expand=True, padx=24, pady=24)
@@ -290,7 +290,7 @@ class MaintenanceApp:
         for line in info_lines:
             ctk.CTkLabel(
                 frame, text=line, font=FONT_MAIN,
-                anchor="w", justify="left",
+                anchor="w", justify="left", wraplength=460,
             ).pack(anchor="w", pady=(0, 6), fill=tk.X)
 
         ctk.CTkButton(
