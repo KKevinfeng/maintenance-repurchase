@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox
 import customtkinter as ctk
 
 from ui.styles import FONT_MAIN, FONT_TITLE
-from utils import center_window
+from utils import center_window, export_to_csv
 
 
 class StarredView:
@@ -58,6 +58,16 @@ class StarredView:
 
     # 绑定关闭事件，关闭时通知主窗口
         win.protocol("WM_DELETE_WINDOW", self._on_close)
+
+        # 底部导出按钮栏（先 pack 到底部，避免被 tree_frame 的 expand 顶出可视区）
+        btn_bar = ctk.CTkFrame(win, fg_color="transparent", height=36)
+        btn_bar.pack_propagate(False)
+        ctk.CTkButton(
+            btn_bar, text="导出 CSV", command=self._export_csv,
+            font=FONT_MAIN, width=100, height=28,
+            corner_radius=6,
+        ).pack(side=tk.RIGHT, padx=4, pady=4)
+        btn_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(0, 12))
 
         # 表格
         tree_frame = ctk.CTkFrame(win, fg_color="transparent")
@@ -166,6 +176,17 @@ class StarredView:
             self.cache.clear_all()
             self._dirty = True
             self._refresh_table()
+
+    # ── 导出 ─────────────────────────────────────────────────
+
+    def _export_csv(self) -> None:
+        """导出当前重点客户数据为 CSV 文件。"""
+        df = self.cache.get_dataframe()
+        if df is None or df.empty:
+            from tkinter import messagebox
+            messagebox.showwarning("提示", "没有数据可导出")
+            return
+        export_to_csv(df, self.win, "重点客户.csv")
 
     # ── 入口 ─────────────────────────────────────────────────
 

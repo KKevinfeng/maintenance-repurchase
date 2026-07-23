@@ -7,7 +7,7 @@ from tkinter import ttk
 import pandas as pd
 import customtkinter as ctk
 from ui.styles import FONT_TITLE, FONT_BOLD
-from utils import center_window
+from utils import center_window, export_to_csv
 
 
 class CustomerDetailWindow:
@@ -25,12 +25,16 @@ class CustomerDetailWindow:
     # ── 窗口构建 ─────────────────────────────────────────────
 
     def _show(self, parent, df, title_text, customer_name):
+        self._export_df = df
+        self._export_name = customer_name
+
         win = ctk.CTkToplevel(parent)
         win.title(f"客户合同详情 — {customer_name}")
         win.geometry("1200x680")
         win.minsize(800, 450)
         center_window(win, 1200, 680)
         win.after(100, win.lift)
+        self._win = win
 
         # 标题
         ctk.CTkLabel(
@@ -136,11 +140,20 @@ class CustomerDetailWindow:
 
         tree.bind("<<TreeviewSelect>>", _on_select)
 
-        # 关闭按钮
+        # 底部按钮栏
+        btn_bar = ctk.CTkFrame(win, fg_color="transparent", height=40)
+        btn_bar.pack_propagate(False)
+        btn_bar.pack(fill=tk.X, padx=12, pady=(0, 12))
+
         ctk.CTkButton(
-            win, text="关闭", command=win.destroy,
+            btn_bar, text="导出 CSV", command=self._export_csv,
+            font=FONT_BOLD, width=100, height=32, corner_radius=6,
+        ).pack(side=tk.RIGHT, padx=(0, 8), pady=4)
+
+        ctk.CTkButton(
+            btn_bar, text="关闭", command=win.destroy,
             font=FONT_BOLD, width=80, height=32, corner_radius=6,
-        ).pack(pady=(0, 12))
+        ).pack(side=tk.RIGHT, pady=4)
 
     @staticmethod
     def _find_product_col(columns: list[str]) -> str | None:
@@ -149,3 +162,15 @@ class CustomerDetailWindow:
             if "产品名称" in c and "型号" in c:
                 return c
         return None
+
+    # ── 导出 ─────────────────────────────────────────────────
+
+    def _export_csv(self) -> None:
+        """导出当前详情数据为 CSV 文件。"""
+        df = getattr(self, "_export_df", None)
+        if df is None or df.empty:
+            from tkinter import messagebox
+            messagebox.showwarning("提示", "没有数据可导出")
+            return
+        name = getattr(self, "_export_name", "客户")
+        export_to_csv(df, self._win, f"合同详情_{name}.csv")

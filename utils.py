@@ -1,9 +1,10 @@
-"""工具函数模块：合同类型识别、产品名称型号列解析、窗口居中"""
+"""工具函数模块：合同类型识别、产品名称型号列解析、窗口居中、CSV 导出"""
 
 from __future__ import annotations
 
 import re
 import tkinter as tk
+from tkinter import filedialog, messagebox
 import pandas as pd
 
 
@@ -152,3 +153,30 @@ def parse_product_lines(cell_value) -> list[dict]:
         # 其他格式（1段或>3段）跳过
 
     return results
+
+
+def export_to_csv(df: pd.DataFrame, parent: tk.Misc, default_filename: str = "export.csv") -> None:
+    """弹出保存对话框，将 DataFrame 导出为 CSV 文件（UTF-8 BOM）。
+
+    参数:
+        df: 要导出的 DataFrame
+        parent: 父窗口（用于对话框居中）
+        default_filename: 默认文件名
+    """
+    if df is None or df.empty:
+        messagebox.showwarning("提示", "没有数据可导出")
+        return
+
+    filepath = filedialog.asksaveasfilename(
+        parent=parent,
+        title="导出 CSV 文件",
+        defaultextension=".csv",
+        filetypes=[("CSV 文件", "*.csv"), ("所有文件", "*.*")],
+        initialfile=default_filename,
+    )
+    if filepath:
+        try:
+            df.to_csv(filepath, index=False, encoding="utf-8-sig")
+            messagebox.showinfo("导出成功", f"已成功导出到：\n{filepath}")
+        except Exception as e:
+            messagebox.showerror("导出失败", f"导出 CSV 文件失败：\n{e}")

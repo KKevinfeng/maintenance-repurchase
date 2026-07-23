@@ -9,7 +9,7 @@ import customtkinter as ctk
 
 from ui.styles import FONT_MAIN, FONT_TITLE, FONT_SMALL
 from ui.column_filter_popup import ColumnFilterPopup
-from utils import center_window
+from utils import center_window, export_to_csv
 
 
 class ExpiryStarredView:
@@ -59,6 +59,16 @@ class ExpiryStarredView:
         # 筛选栏（初始隐藏）
         self.filter_bar = ctk.CTkFrame(win, fg_color="transparent")
 
+        # 底部导出按钮栏（先 pack 到底部，避免被 tree_frame 的 expand 顶出可视区）
+        btn_bar = ctk.CTkFrame(win, fg_color="transparent", height=36)
+        btn_bar.pack_propagate(False)
+        ctk.CTkButton(
+            btn_bar, text="导出 CSV", command=self._export_csv,
+            font=FONT_MAIN, width=100, height=28,
+            corner_radius=6,
+        ).pack(side=tk.RIGHT, padx=4, pady=4)
+        btn_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=12, pady=(0, 12))
+
         # 表格区域
         tree_frame = ctk.CTkFrame(win, fg_color="transparent")
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=(4, 12))
@@ -101,6 +111,7 @@ class ExpiryStarredView:
 
     def _fill_tree(self, df: pd.DataFrame) -> None:
         """将 DataFrame 填入 Treeview。"""
+        self._display_df = df.copy()  # 保存当前显示数据，供导出使用
         tree = self.tree
         reordered_cols = self._reorder_columns(list(df.columns))
         display = [self.SEQ_COL] + reordered_cols
@@ -340,6 +351,17 @@ class ExpiryStarredView:
         if "行业" in col:
             return 150
         return 160
+
+    # ── 导出 ─────────────────────────────────────────────────
+
+    def _export_csv(self) -> None:
+        """导出当前表格数据为 CSV 文件（包含筛选和排序结果）。"""
+        df = getattr(self, "_display_df", None)
+        if df is None or df.empty:
+            from tkinter import messagebox
+            messagebox.showwarning("提示", "没有数据可导出")
+            return
+        export_to_csv(df, self.win, "重点客户过保合同.csv")
 
     # ── 入口 ─────────────────────────────────────────────────
 

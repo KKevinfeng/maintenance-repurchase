@@ -7,6 +7,8 @@ from tkinter import ttk
 import pandas as pd
 import customtkinter as ctk
 
+from utils import export_to_csv
+
 
 class BaseTab:
     """可复用的 Tab 页基类。子类只需指定列名、实现 compute_data()。"""
@@ -74,6 +76,16 @@ class BaseTab:
         scrollbar_x.grid(row=1, column=0, sticky="ew")
         frame.rowconfigure(0, weight=1)
         frame.columnconfigure(0, weight=1)
+
+        # 底部导出按钮栏
+        btn_bar = ctk.CTkFrame(frame, fg_color="transparent", height=36)
+        btn_bar.pack_propagate(False)
+        btn_bar.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(4, 0))
+        ctk.CTkButton(
+            btn_bar, text="导出 CSV", command=self._export_csv,
+            font=("Microsoft YaHei", 11), width=100, height=28,
+            corner_radius=6,
+        ).pack(side=tk.RIGHT, padx=4, pady=4)
 
         self.frame = frame
         self.tree = tree
@@ -236,3 +248,13 @@ class BaseTab:
         """处理双击事件，委托给回调函数。"""
         if self.on_double_click_callback:
             self.on_double_click_callback(self.tree, event)
+
+    # ── 导出 ─────────────────────────────────────────────────
+
+    def _export_csv(self) -> None:
+        """导出当前表格数据为 CSV 文件。"""
+        if self.source_df is None or self.source_df.empty:
+            from tkinter import messagebox
+            messagebox.showwarning("提示", "没有数据可导出")
+            return
+        export_to_csv(self.source_df, self.frame, f"{self.tab_name}.csv")

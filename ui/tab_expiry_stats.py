@@ -12,7 +12,7 @@ from ui.styles import FONT_MAIN, FONT_SMALL, FONT_TITLE, setup_treeview_style
 from ui.expiry_starred_view import ExpiryStarredView
 from ui.progress_popup import ProgressPopup
 from ui.column_filter_popup import ColumnFilterPopup
-from utils import classify_contract, center_window
+from utils import classify_contract, center_window, export_to_csv
 
 
 class ExpiryStatsTab:
@@ -69,6 +69,16 @@ class ExpiryStatsTab:
         self.filter_bar = ctk.CTkFrame(frame, fg_color="transparent")
         # 不立即 pack，等数据加载后再显示
 
+        # 底部导出按钮栏（先 pack 到底部，避免被 tree_frame 的 expand 顶出可视区）
+        btn_bar = ctk.CTkFrame(frame, fg_color="transparent", height=36)
+        btn_bar.pack_propagate(False)
+        ctk.CTkButton(
+            btn_bar, text="导出 CSV", command=self._export_csv,
+            font=FONT_MAIN, width=100, height=28,
+            corner_radius=6,
+        ).pack(side=tk.RIGHT, padx=4, pady=4)
+        btn_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=8, pady=(0, 8))
+
         # ── 表格 ──
         tree_frame = ctk.CTkFrame(frame, fg_color="transparent")
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=(4, 8))
@@ -91,6 +101,7 @@ class ExpiryStatsTab:
         self.frame = frame
         self.tree = tree
         self.tree_frame = tree_frame
+
         return frame
 
     # ── 文件浏览 & 加载 ──────────────────────────────────────
@@ -266,6 +277,7 @@ class ExpiryStatsTab:
 
     def _fill_tree(self, df: pd.DataFrame) -> None:
         """将 DataFrame 填入 Treeview。"""
+        self._display_df = df.copy()  # 保存当前显示数据，供导出使用
         tree = self.tree
         tree["show"] = "headings"
 
@@ -497,3 +509,13 @@ class ExpiryStatsTab:
 
         sorted_df = display_df.sort_values(col, ascending=self.sort_asc).reset_index(drop=True)
         self._fill_tree(sorted_df)
+
+    # ── 导出 ─────────────────────────────────────────────────
+
+    def _export_csv(self) -> None:
+        """导出当前表格数据为 CSV 文件（包含筛选和排序结果）。"""
+        df = getattr(self, "_display_df", None)
+        if df is None or df.empty:
+            messagebox.showwarning("提示", "没有数据可导出")
+            return
+        export_to_csv(df, self.frame, "过保情况统计.csv")
