@@ -103,7 +103,7 @@ class IndustryTab(BaseTab):
         table_frame = ctk.CTkFrame(popup, fg_color="transparent")
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
-        columns = ["二级行业", "数量"]
+        columns = ["#", "二级行业", "数量"]
         tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)
 
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
@@ -115,7 +115,9 @@ class IndustryTab(BaseTab):
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
 
-        # 配置列
+        # 配置列（含序号列）
+        tree.heading("#", text="#", anchor="center")
+        tree.column("#", anchor="center", width=50, minwidth=40, stretch=False)
         tree.heading("二级行业", text="二级行业", anchor="center")
         tree.column("二级行业", anchor="center", width=300, minwidth=150, stretch=True)
         tree.heading("数量", text="数量", anchor="center")
@@ -195,7 +197,7 @@ class IndustryTab(BaseTab):
         table_frame = ctk.CTkFrame(popup, fg_color="transparent")
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
-        columns = ["最终客户名称"]
+        columns = ["#", "最终客户名称"]
         tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=15)
 
         vsb = ttk.Scrollbar(table_frame, orient="vertical", command=tree.yview)
@@ -207,6 +209,8 @@ class IndustryTab(BaseTab):
         table_frame.grid_rowconfigure(0, weight=1)
         table_frame.grid_columnconfigure(0, weight=1)
 
+        tree.heading("#", text="#", anchor="center")
+        tree.column("#", anchor="center", width=50, minwidth=40, stretch=False)
         tree.heading("最终客户名称", text="最终客户名称", anchor="center")
         tree.column("最终客户名称", anchor="center", width=300, minwidth=150, stretch=True)
 
