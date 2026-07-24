@@ -39,7 +39,7 @@ class IndustryTab(BaseTab):
     def compute_data(self, df: pd.DataFrame) -> pd.DataFrame:
         from data_processor import compute_industry_stats
 
-        self._raw_df = df[["一级行业", "二级行业"]].copy()
+        self._raw_df = df[["一级行业", "二级行业", "最终客户名称"]].copy()
         self._raw_df["一级行业"] = self._raw_df["一级行业"].fillna("未知")
         self._raw_df["二级行业"] = self._raw_df["二级行业"].fillna("未知")
         return compute_industry_stats(self._raw_df)
