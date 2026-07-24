@@ -47,6 +47,12 @@ class IndustryTab(BaseTab):
         self._raw_df = self._raw_df[self._raw_df["一级行业"] != "未知"]
         return compute_industry_stats(self._raw_df)
 
+    def _on_header_click(self, col: str) -> None:
+        """表头点击排序 — 一级行业列不参与排序。"""
+        if "行业" in col:
+            return
+        super()._on_header_click(col)
+
     def _handle_double_click(self, event) -> None:
         """双击一级行业 → 弹出二级行业统计窗口。"""
         tree = self.tree
@@ -123,8 +129,26 @@ class IndustryTab(BaseTab):
         tree.column("#", anchor="center", width=50, minwidth=40, stretch=False)
         tree.heading("二级行业", text="二级行业", anchor="center")
         tree.column("二级行业", anchor="center", width=300, minwidth=150, stretch=True)
-        tree.heading("数量", text="数量", anchor="center")
+        tree.heading("数量", text="数量", anchor="center",
+                     command=lambda: _sort_popup_tree(tree, df, "数量"))
         tree.column("数量", anchor="center", width=100, minwidth=60, stretch=True)
+
+        # 排序状态
+        _sort_state = {"col": None, "asc": True}
+
+        def _sort_popup_tree(tv, src_df, col):
+            if col == _sort_state["col"]:
+                _sort_state["asc"] = not _sort_state["asc"]
+            else:
+                _sort_state["col"] = col
+                _sort_state["asc"] = False  # 首次点击降序
+            sorted_df = src_df.sort_values(col, ascending=_sort_state["asc"]).reset_index(drop=True)
+            arrow = " ▲" if _sort_state["asc"] else " ▼"
+            tv.heading("数量", text="数量" + arrow,
+                       command=lambda: _sort_popup_tree(tv, sorted_df, "数量"))
+            tv.delete(*tv.get_children())
+            for i, (_, r) in enumerate(sorted_df.iterrows(), 1):
+                tv.insert("", tk.END, values=(str(i), r["二级行业"], int(r["数量"])))
 
         # 填入数据
         for idx, (_, row) in enumerate(df.iterrows(), 1):
