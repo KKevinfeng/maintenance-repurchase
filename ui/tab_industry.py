@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from tkinter import ttk
+from typing import Optional
 import pandas as pd
 import customtkinter as ctk
 
@@ -18,7 +19,7 @@ class IndustryTab(BaseTab):
     has_star: bool = False
 
     # 保留原始 DataFrame 用于下钻
-    _raw_df: pd.DataFrame | None = None
+    _raw_df: Optional[pd.DataFrame] = None
 
     def build(self, parent: ctk.CTkFrame) -> None:
         self.frame = parent
