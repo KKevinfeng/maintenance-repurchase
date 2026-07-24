@@ -37,9 +37,6 @@ class MaintenanceApp:
         "产品名称型号",
         "最终客户名称",
         "合同金额（元）*",
-    ]
-
-    OPTIONAL_COL_KEYWORDS = [
         "一级行业",
         "二级行业",
     ]
@@ -413,13 +410,6 @@ class MaintenanceApp:
                 result_df = raw_df[list(col_map.values())].rename(
                     columns={v: k for k, v in col_map.items()}
                 )
-
-                # 提取可选列（有则加入，没有则跳过）
-                for keyword in self.OPTIONAL_COL_KEYWORDS:
-                    found = [c for c in raw_df.columns if keyword in str(c)]
-                    if found:
-                        result_df[keyword] = raw_df[found[0]]
-
                 self._load_df = result_df
 
                 log_info(f"数据文件加载成功: {filepath}，共 {len(result_df)} 行")
