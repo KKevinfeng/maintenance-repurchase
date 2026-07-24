@@ -42,6 +42,9 @@ class IndustryTab(BaseTab):
         self._raw_df = df[["一级行业", "二级行业", "最终客户名称"]].copy()
         self._raw_df["一级行业"] = self._raw_df["一级行业"].fillna("未知")
         self._raw_df["二级行业"] = self._raw_df["二级行业"].fillna("未知")
+
+        # 过滤掉一级行业为"未知"的行
+        self._raw_df = self._raw_df[self._raw_df["一级行业"] != "未知"]
         return compute_industry_stats(self._raw_df)
 
     def _handle_double_click(self, event) -> None:
