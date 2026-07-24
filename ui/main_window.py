@@ -293,7 +293,7 @@ class MaintenanceApp:
         ).pack(pady=(0, 16))
 
         ctk.CTkLabel(
-            frame, text="版本信息：2.1.3", font=FONT_MAIN,
+            frame, text="版本信息：2.2.1.5", font=FONT_MAIN,
             anchor="w", justify="left",
         ).pack(anchor="w", pady=(0, 6), fill=tk.X)
 

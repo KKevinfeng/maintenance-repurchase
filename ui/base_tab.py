@@ -50,13 +50,13 @@ class BaseTab:
 
         tree = ttk.Treeview(frame, columns=self.columns, show="headings", height=20)
 
-        for col in self.columns:
+        for idx, col in enumerate(self.columns):
             tree.heading(col, text=col, anchor="center")
             tree.heading(
                 col, command=lambda c=col: self._on_header_click(c)
             )
             w = self._column_width(col)
-            tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=True)
+            tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=False)
 
         tree["show"] = ""  # 初始状态隐藏表头
 
@@ -95,12 +95,54 @@ class BaseTab:
 
     @staticmethod
     def _column_width(col: str) -> int:
-        """根据列名类型返回合适的列宽。"""
+        """根据列名类型返回初始列宽（仅 build 阶段使用，无数据时的 fallback）。"""
         if col.isdigit() and len(col) == 4:
             return 110
         if "名称" in col:
             return 220
         return 160
+
+    # ── 内容自适应列宽 ──────────────────────────────────────
+
+    @staticmethod
+    def _format_cell(val) -> str:
+        """将单元格值转为展示字符串，用于计算列宽。"""
+        if isinstance(val, float):
+            return f"{val:,.2f}"
+        elif isinstance(val, int):
+            return f"{val:,}"
+        return str(val)
+
+    def _estimate_text_width(self, text: str) -> int:
+        """估算文字像素宽度：中文 ~14px，英文/数字 ~7px，其他 ~10px。"""
+        width = 0
+        for ch in str(text):
+            code = ord(ch)
+            if 0x4E00 <= code <= 0x9FFF or 0x3000 <= code <= 0x303F or 0xFF00 <= code <= 0xFFEF:
+                width += 14
+            elif code < 128:
+                width += 7
+            else:
+                width += 10
+        return width
+
+    def _calc_content_widths(self, df: pd.DataFrame) -> dict[str, int]:
+        """按每列最长内容计算像素宽度，返回 {列名: 像素宽}。"""
+        data_cols = list(df.columns)
+        widths: dict[str, int] = {}
+        for col in data_cols:
+            # 表头宽度
+            max_px = self._estimate_text_width(col)
+            # 内容宽度（最多采样 200 行）
+            sample = df[col].head(200)
+            for val in sample:
+                cell_text = self._format_cell(val)
+                px = self._estimate_text_width(cell_text)
+                if px > max_px:
+                    max_px = px
+            # 加 28px 内边距，最小 60px
+            widths[col] = max(60, max_px + 28)
+        return widths
 
     # ── 数据计算（子类实现） ────────────────────────────────
 
@@ -129,13 +171,7 @@ class BaseTab:
             # 格式化数据值
             formatted = []
             for col in df_cols:
-                val = row[col]
-                if isinstance(val, float):
-                    formatted.append(f"{val:,.2f}")
-                elif isinstance(val, int):
-                    formatted.append(f"{val:,}")
-                else:
-                    formatted.append(str(val))
+                formatted.append(self._format_cell(row[col]))
 
             # 标星列
             if self.has_star:
@@ -151,7 +187,7 @@ class BaseTab:
     # ── 列同步 ──────────────────────────────────────────────
 
     def _sync_columns(self, df: pd.DataFrame) -> None:
-        """确保 Treeview 列与 DataFrame 列一致（含序号列 # 和标星列）。"""
+        """确保 Treeview 列与 DataFrame 列一致，并按内容自适应列宽。"""
         tree = self.tree
         if self.has_star:
             display = [self.STAR_COL, self.SEQ_COL] + list(df.columns)
@@ -169,22 +205,59 @@ class BaseTab:
 
         tree["columns"] = display
 
-        # 标星列
+        data_cols = list(df.columns)
+
+        # 内容自适应宽度（数据列）
+        content_widths = self._calc_content_widths(df)
+        total_content = sum(content_widths.values())
+
+        # 均分列：序号 + 数据列；标星列固定不参与均分
+        stretch_cols = [self.SEQ_COL] + data_cols
+
+        # 标星列为额外固定宽度
+        star_fixed = 50 if self.has_star else 0
+
+        # 获取 Treeview 实际可用宽度（先刷新布局，避免读到 1）
+        try:
+            self.master.update_idletasks()
+            tree_width = self.tree.winfo_width()
+            if tree_width <= 1:
+                # 当前 Tab 未显示，Treeview 宽度为 1，用父容器宽度估算
+                tree_width = self.master.winfo_width()
+            avail = max(300, tree_width - star_fixed - 16)
+        except Exception:
+            avail = 1200
+
+        # 判断能放下 → # + 数据列均分拉伸；放不下 → 数据列按内容，序号固定 50px
+        if total_content + 50 <= avail:
+            per_col = max(80, avail // len(stretch_cols))
+            use_stretch = True
+            widths = {col: per_col for col in stretch_cols}
+        else:
+            use_stretch = False
+            widths = content_widths.copy()
+            widths[self.SEQ_COL] = 50
+
+        # 标星列（始终固定 50px）
         if self.has_star:
             tree.heading(self.STAR_COL, text="★", anchor="center")
-            tree.column(self.STAR_COL, anchor="center", width=50, minwidth=50)
+            tree.column(
+                self.STAR_COL, anchor="center",
+                width=50, minwidth=50, stretch=False,
+            )
 
+        # 序号列
         tree.heading(self.SEQ_COL, text="#", anchor="center")
-        tree.column(self.SEQ_COL, anchor="center", width=50, minwidth=50)
+        tree.column(
+            self.SEQ_COL, anchor="center",
+            width=widths[self.SEQ_COL], minwidth=50, stretch=use_stretch,
+        )
 
-        data_cols = list(df.columns)
-        old_cols = set(current) if current else set()
         for col in data_cols:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
-            if col not in old_cols:
-                w = self._column_width(col)
-                tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=True)
+            w = widths.get(col, 160)
+            tree.column(col, anchor="center", width=w, minwidth=60, stretch=use_stretch)
 
     # ── 排序 ─────────────────────────────────────────────────
 
