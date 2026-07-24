@@ -15,32 +15,26 @@ from utils import center_window, export_to_csv
 class IndustryTab(BaseTab):
     """一级行业统计表 — 双击下钻查看二级行业和客户。"""
 
-    tab_name: str = "行业统计"
-    has_star: bool = False
-
     # 保留原始 DataFrame 用于下钻
     _raw_df: Optional[pd.DataFrame] = None
 
-    def build(self, parent: ctk.CTkFrame) -> None:
-        self.frame = parent
-        self._build_toolbar()
-        self._build_table()
+    def __init__(self, master, on_double_click=None):
+        super().__init__(
+            master=master,
+            tab_name="行业统计",
+            columns=["一级行业", "数量"],
+            on_double_click=on_double_click,
+            has_star=False,
+        )
 
-    def _build_toolbar(self) -> None:
-        toolbar = ctk.CTkFrame(self.frame, fg_color="transparent")
-        toolbar.pack(fill=tk.X, padx=8, pady=(6, 2))
-
+    def build(self) -> ctk.CTkFrame:
+        """构建 UI：利用基类 Treeview，在底部按钮栏添加标题。"""
+        frame = super().build()
         ctk.CTkLabel(
-            toolbar, text="行业统计",
+            self._btn_bar, text="行业统计",
             font=FONT_TITLE, text_color="#1F6AA5",
         ).pack(side=tk.LEFT, padx=(4, 16))
-
-        ctk.CTkButton(
-            toolbar, text="导出 CSV", command=self._export_csv,
-            font=FONT_SMALL, width=80, height=26,
-            fg_color="#1F6AA5", hover_color="#155485",
-            corner_radius=6,
-        ).pack(side=tk.RIGHT, padx=(4, 4))
+        return frame
 
     def compute_data(self, df: pd.DataFrame) -> pd.DataFrame:
         from data_processor import compute_industry_stats
