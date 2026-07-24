@@ -143,19 +143,59 @@ def compute_product_sales(df: pd.DataFrame, merge_rules=None) -> pd.DataFrame:
 
 def compute_industry_stats(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Tab 5：按一级行业统计合同数量，降序排列。
+    Tab 5：按一级行业统计不重复客户数量、合同总金额及分年金额，降序排列。
 
     返回:
-        DataFrame[一级行业, 数量]
+        DataFrame[一级行业, 数量, 行业总金额, 2026, 2025, ...]
     """
-    result = df.groupby("一级行业").size().reset_index(name="数量")
-    result = result.sort_values("数量", ascending=False).reset_index(drop=True)
+    df = df.copy()
+
+    # 不重复客户数量
+    customer_count = df.groupby("一级行业")["最终客户名称"].nunique()
+
+    # 提取年份用于分年统计
+    df["年份"] = df["合同编号*"].apply(extract_contract_year)
+    df = df[df["年份"].notna()]
+    df["年份"] = df["年份"].astype(int)
+
+    # 按行业 × 年份透视金额
+    pivot = df.pivot_table(
+        values="合同金额（元）*",
+        index="一级行业",
+        columns="年份",
+        aggfunc="sum",
+        fill_value=0.0,
+    )
+
+    year_range = sorted(df["年份"].unique(), reverse=True)
+    for y in year_range:
+        if y not in pivot.columns:
+            pivot[y] = 0.0
+    pivot = pivot[year_range]
+
+    # 行业总金额 = 各年之和
+    pivot["行业总金额"] = pivot.sum(axis=1)
+
+    pivot = pivot.reset_index()
+
+    # 合并不重复客户数量
+    pivot["数量"] = pivot["一级行业"].map(customer_count).fillna(0).astype(int)
+
+    # 构建结果
+    result = pd.DataFrame()
+    result["一级行业"] = pivot["一级行业"]
+    result["数量"] = pivot["数量"]
+    result["行业总金额"] = pivot["行业总金额"]
+    for y in year_range:
+        result[str(y)] = pivot[y]
+
+    result = result.sort_values("行业总金额", ascending=False).reset_index(drop=True)
     return result
 
 
 def get_secondary_industries(df: pd.DataFrame, primary: str) -> pd.DataFrame:
     """
-    查询指定一级行业下的二级行业统计。
+    查询指定一级行业下的二级行业统计（按不重复客户计数）。
 
     参数:
         df: 原始合同 DataFrame
@@ -165,7 +205,7 @@ def get_secondary_industries(df: pd.DataFrame, primary: str) -> pd.DataFrame:
         DataFrame[二级行业, 数量]
     """
     subset = df[df["一级行业"] == primary]
-    result = subset.groupby("二级行业").size().reset_index(name="数量")
+    result = subset.groupby("二级行业")["最终客户名称"].nunique().reset_index(name="数量")
     result = result.sort_values("数量", ascending=False).reset_index(drop=True)
     return result
 
