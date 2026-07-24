@@ -141,6 +141,55 @@ def compute_product_sales(df: pd.DataFrame, merge_rules=None) -> pd.DataFrame:
     return result
 
 
+def compute_industry_stats(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Tab 5：按一级行业统计合同数量，降序排列。
+
+    返回:
+        DataFrame[一级行业, 数量]
+    """
+    result = df.groupby("一级行业").size().reset_index(name="数量")
+    result = result.sort_values("数量", ascending=False).reset_index(drop=True)
+    return result
+
+
+def get_secondary_industries(df: pd.DataFrame, primary: str) -> pd.DataFrame:
+    """
+    查询指定一级行业下的二级行业统计。
+
+    参数:
+        df: 原始合同 DataFrame
+        primary: 一级行业名称
+
+    返回:
+        DataFrame[二级行业, 数量]
+    """
+    subset = df[df["一级行业"] == primary]
+    result = subset.groupby("二级行业").size().reset_index(name="数量")
+    result = result.sort_values("数量", ascending=False).reset_index(drop=True)
+    return result
+
+
+def get_industry_customers(df: pd.DataFrame, primary: str, secondary: str) -> pd.DataFrame:
+    """
+    查询指定一级+二级行业下的客户名单。
+
+    参数:
+        df: 原始合同 DataFrame
+        primary: 一级行业名称
+        secondary: 二级行业名称
+
+    返回:
+        DataFrame[最终客户名称]
+    """
+    subset = df[(df["一级行业"] == primary) & (df["二级行业"] == secondary)]
+    if subset.empty:
+        return pd.DataFrame(columns=["最终客户名称"])
+    result = subset[["最终客户名称"]].drop_duplicates()
+    result = result.sort_values("最终客户名称").reset_index(drop=True)
+    return result
+
+
 def get_product_p_contracts(df: pd.DataFrame, product_name: str, merge_rules=None) -> pd.DataFrame:
     """
     查询与指定产品名称关联的所有 P 类合同明细。

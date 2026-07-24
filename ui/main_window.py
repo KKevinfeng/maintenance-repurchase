@@ -20,6 +20,7 @@ from ui.tab_customer_total import CustomerTotalTab
 from ui.tab_customer_category import CustomerCategoryTab
 from ui.tab_expiry_stats import ExpiryStatsTab
 from ui.tab_product_sales import ProductSalesTab
+from ui.tab_industry import IndustryTab
 from ui.detail_window import CustomerDetailWindow
 from ui.starred_cache import StarredCache
 from ui.starred_view import StarredView
@@ -142,7 +143,7 @@ class MaintenanceApp:
         tab_bar = ctk.CTkFrame(outer, fg_color="transparent")
         tab_bar.pack(fill=tk.X, anchor="w", pady=(0, 4))
 
-        self.tab_names = ["客户总金额统计", "客户分类金额统计", "过保情况统计", "产品销量统计"]
+        self.tab_names = ["客户总金额统计", "客户分类金额统计", "过保情况统计", "产品销量统计", "行业统计"]
         # Tab 栏 - 自定义按钮实现，支持选中白色文字/未选中黑色文字
         self.tab_buttons: dict[str, ctk.CTkButton] = {}
         btn_frame = ctk.CTkFrame(tab_bar, fg_color="transparent")
@@ -185,11 +186,16 @@ class MaintenanceApp:
             on_double_click=None,
             on_data_change=self._on_product_sales_data_change,
         )
+        self.tab_industry = IndustryTab(
+            self.tab_content,
+            on_double_click=None,
+        )
 
         self.tabs = [
             self.tab_customer_total,
             self.tab_customer_category,
             self.tab_product_sales,
+            self.tab_industry,
         ]  # 仅包含使用共享 df 的 Tab（不含过保情况统计）
 
         for tab in self.tabs:
@@ -212,6 +218,8 @@ class MaintenanceApp:
             self.tab_expiry_stats.frame.pack(fill=tk.BOTH, expand=True)
         elif name == self.tab_names[3]:
             self.tab_product_sales.frame.pack(fill=tk.BOTH, expand=True)
+        elif name == self.tab_names[4]:
+            self.tab_industry.frame.pack(fill=tk.BOTH, expand=True)
         self._update_tab_button_style(name)
 
     def _update_tab_button_style(self, active_name: str):
