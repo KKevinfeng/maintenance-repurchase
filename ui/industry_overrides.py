@@ -4,6 +4,8 @@ import json
 import os
 from typing import Optional
 
+from ui.logger import log_info, log_error
+
 OVERRIDES_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "industry_overrides.json")
 
 
@@ -13,16 +15,19 @@ def _load() -> dict[str, dict[str, str]]:
         if os.path.exists(OVERRIDES_FILE):
             with open(OVERRIDES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(f"读取行业覆盖规则文件失败: {e}")
     return {}
 
 
 def _save(data: dict[str, dict[str, str]]) -> None:
     """保存到 JSON 文件。"""
-    os.makedirs(os.path.dirname(OVERRIDES_FILE), exist_ok=True)
-    with open(OVERRIDES_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        os.makedirs(os.path.dirname(OVERRIDES_FILE), exist_ok=True)
+        with open(OVERRIDES_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        log_error(f"保存行业覆盖规则文件失败: {e}")
 
 
 def get_all() -> dict[str, dict[str, str]]:
@@ -40,6 +45,7 @@ def set_override(customer: str, primary: str, secondary: str) -> None:
     data = _load()
     data[customer.strip()] = {"一级行业": primary.strip(), "二级行业": secondary.strip()}
     _save(data)
+    log_info(f"设置行业覆盖规则: {customer.strip()} → {primary.strip()} / {secondary.strip()}")
 
 
 def remove_override(customer: str) -> None:
@@ -47,6 +53,7 @@ def remove_override(customer: str) -> None:
     data = _load()
     data.pop(customer.strip(), None)
     _save(data)
+    log_info(f"删除行业覆盖规则: {customer.strip()}")
 
 
 def apply_overrides(df: "pd.DataFrame") -> "pd.DataFrame":
@@ -58,10 +65,13 @@ def apply_overrides(df: "pd.DataFrame") -> "pd.DataFrame":
     df = df.copy()
     # 先去掉客户名两端空格，确保匹配一致
     df["最终客户名称"] = df["最终客户名称"].astype(str).str.strip()
+    matched = 0
     for customer, mapping in overrides.items():
         customer_clean = customer.strip()
         mask = df["最终客户名称"] == customer_clean
         if mask.any():
             df.loc[mask, "一级行业"] = mapping["一级行业"]
             df.loc[mask, "二级行业"] = mapping["二级行业"]
+            matched += 1
+    log_info(f"应用行业覆盖规则: {matched}/{len(overrides)} 条生效")
     return df

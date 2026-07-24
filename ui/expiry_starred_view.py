@@ -234,6 +234,7 @@ class ExpiryStarredView:
         self.sort_asc = True
         self._fill_tree(self._get_display_df())
         self._build_filter_bar()
+        log_info(f"重点客户过保合同筛选 [{col}]: {len(selected)} 个选项")
 
     def _clear_filters(self):
         self.active_filters.clear()
@@ -241,6 +242,7 @@ class ExpiryStarredView:
         self.sort_asc = True
         self._fill_tree(self.original_df)
         self._build_filter_bar()
+        log_info("重点客户过保合同: 清除筛选条件")
 
     def _get_display_df(self):
         df = self.original_df
@@ -285,6 +287,7 @@ class ExpiryStarredView:
             .reset_index(drop=True)
         )
         self._fill_tree(sorted_df)
+        log_info(f"重点客户过保合同排序: {self._clean_col(col)} {'升序' if self.sort_asc else '降序'}")
 
     def _update_headers(self) -> None:
         """更新表头文字，排序列添加 ▲/▼ 箭头。"""

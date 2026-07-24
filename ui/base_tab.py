@@ -178,11 +178,13 @@ class BaseTab:
         tree.column(self.SEQ_COL, anchor="center", width=50, minwidth=50)
 
         data_cols = list(df.columns)
+        old_cols = set(current) if current else set()
         for col in data_cols:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
-            w = self._column_width(col)
-            tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=True)
+            if col not in old_cols:
+                w = self._column_width(col)
+                tree.column(col, anchor="center", width=w, minwidth=min(w, 90), stretch=True)
 
     # ── 排序 ─────────────────────────────────────────────────
 

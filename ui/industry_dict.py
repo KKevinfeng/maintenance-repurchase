@@ -4,6 +4,8 @@ import json
 import os
 from typing import Optional
 
+from ui.logger import log_info, log_error
+
 DICT_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "industry_dict.json")
 
 
@@ -13,16 +15,19 @@ def _load() -> dict[str, list[str]]:
         if os.path.exists(DICT_FILE):
             with open(DICT_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as e:
+        log_error(f"读取行业数据字典文件失败: {e}")
     return {"一级行业": [], "二级行业": []}
 
 
 def _save(data: dict[str, list[str]]) -> None:
     """保存到 JSON 文件。"""
-    os.makedirs(os.path.dirname(DICT_FILE), exist_ok=True)
-    with open(DICT_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    try:
+        os.makedirs(os.path.dirname(DICT_FILE), exist_ok=True)
+        with open(DICT_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        log_error(f"保存行业数据字典文件失败: {e}")
 
 
 def get_all() -> dict[str, list[str]]:
@@ -48,6 +53,7 @@ def add_primary(name: str) -> None:
         items.append(name)
         items.sort()
         _save(data)
+        log_info(f"新增一级行业: {name}")
 
 
 def add_secondary(name: str) -> None:
@@ -58,6 +64,7 @@ def add_secondary(name: str) -> None:
         items.append(name)
         items.sort()
         _save(data)
+        log_info(f"新增二级行业: {name}")
 
 
 def remove_primary(name: str) -> None:
@@ -67,6 +74,7 @@ def remove_primary(name: str) -> None:
     if name in items:
         items.remove(name)
         _save(data)
+        log_info(f"删除一级行业: {name}")
 
 
 def remove_secondary(name: str) -> None:
@@ -76,12 +84,14 @@ def remove_secondary(name: str) -> None:
     if name in items:
         items.remove(name)
         _save(data)
+        log_info(f"删除二级行业: {name}")
 
 
 def merge_from_dataframe(df: "pd.DataFrame") -> None:
     """从 DataFrame 中提取一级/二级行业，合并到字典中（去重）。"""
     data = _load()
     changed = False
+    added_count = 0
 
     for col, key in [("一级行业", "一级行业"), ("二级行业", "二级行业")]:
         if col not in df.columns:
@@ -94,8 +104,10 @@ def merge_from_dataframe(df: "pd.DataFrame") -> None:
                 items.append(val)
                 existing.add(val)
                 changed = True
+                added_count += 1
 
     if changed:
         data["一级行业"] = sorted(data["一级行业"])
         data["二级行业"] = sorted(data["二级行业"])
         _save(data)
+        log_info(f"自动合并行业字典: 新增 {added_count} 个条目")

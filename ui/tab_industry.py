@@ -10,7 +10,7 @@ from ui.base_tab import BaseTab
 from ui.industry_dict import get_primary as dict_primary, get_secondary as dict_secondary, \
     add_primary, add_secondary, remove_primary, remove_secondary, merge_from_dataframe
 from ui.industry_overrides import apply_overrides, set_override, remove_override, get_all
-from ui.logger import log_info
+from ui.logger import log_info, log_error
 from ui.styles import FONT_MAIN, FONT_TITLE, FONT_SMALL
 from utils import center_window, export_to_csv
 
@@ -178,6 +178,7 @@ class IndustryTab(BaseTab):
             self.tree.update_idletasks()
             self.frame.update_idletasks()
         except Exception as e:
+            log_error(f"应用行业覆盖规则时出错: {e}")
             messagebox.showerror("刷新失败", f"应用行业覆盖规则时出错:\n{e}", parent=self.frame)
 
     def _edit_customer_industry(self, customer_name: str) -> None:

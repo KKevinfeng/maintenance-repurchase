@@ -1,3 +1,25 @@
+2026年7月24日 更新日志 — v2.2.1.2
+
+【错误修复】
+
+- 修复 Treeview 表格列宽固定、拖拽后弹回的问题：_sync_columns 不再对已有列重复设宽度，仅对新列设初始宽度
+
+【优化功能】
+
+日志系统全覆盖（续）
+- industry_overrides.py：新增完整日志，_load/_save 异常保护，set_override/remove_override/apply_overrides 增加操作日志
+- industry_dict.py：新增完整日志，_load/_save 异常保护，增删行业及 merge_from_dataframe 增加操作日志
+- data_processor.py：6 个计算函数均增加完成日志（含统计维度信息）
+- tab_industry.py：_refresh_tab_after_override 异常处理增加 log_error
+- log_view.py：查看日志弹窗文件读取增加 try/except 保护
+- expiry_starred_view.py：排序、筛选、清除筛选增加操作日志
+
+命名统一
+- README.md 标题与 build.spec 打包名统一为"合同数据处理工具"
+- 移除 build.spec，改用 Nuitka 打包
+
+---
+
 2026年7月24日 更新日志 — v2.2.0
 
 【新增功能】

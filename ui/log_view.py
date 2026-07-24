@@ -37,8 +37,11 @@ class LogViewer:
         log_dir = get_log_dir()
         err_path = os.path.join(log_dir, "error.log")
         if os.path.exists(err_path):
-            with open(err_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            try:
+                with open(err_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception as e:
+                content = f"读取报错日志失败: {e}"
             title = "报错日志 — error.log"
         else:
             content = "暂无报错日志。"
@@ -52,8 +55,11 @@ class LogViewer:
         today = datetime.now().strftime("%Y%m%d")
         run_path = os.path.join(log_dir, f"run_{today}.log")
         if os.path.exists(run_path):
-            with open(run_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            try:
+                with open(run_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+            except Exception as e:
+                content = f"读取运行日志失败: {e}"
             title = f"运行日志 — run_{today}.log"
         else:
             content = "暂无运行日志。"

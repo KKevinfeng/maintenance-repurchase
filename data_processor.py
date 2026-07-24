@@ -1,6 +1,7 @@
-"""数据处理模块：三个 Tab 页的数据计算逻辑"""
+"""数据处理模块：各个 Tab 页的数据计算逻辑"""
 
 import pandas as pd
+from ui.logger import log_info
 from utils import (
     classify_contract,
     parse_product_lines,
@@ -57,6 +58,7 @@ def compute_customer_total(df: pd.DataFrame) -> pd.DataFrame:
         result[str(y)] = pivot[y]
 
     result = result.sort_values("合同总金额", ascending=False).reset_index(drop=True)
+    log_info(f"客户总金额统计完成: {len(result)} 个客户, {year_range[-1]}-{year_range[0]} 年")
     return result
 
 
@@ -89,6 +91,7 @@ def compute_customer_category(df: pd.DataFrame) -> pd.DataFrame:
     pivot["合计总金额"] = pivot.sum(axis=1)
     pivot = pivot.sort_values("合计总金额", ascending=False).reset_index()
 
+    log_info(f"客户分类统计完成: {len(pivot)} 个客户")
     return pivot
 
 
@@ -138,6 +141,7 @@ def compute_product_sales(df: pd.DataFrame, merge_rules=None) -> pd.DataFrame:
         [{"产品名称": k, "售卖总台数": v} for k, v in product_totals.items()]
     ).sort_values("售卖总台数", ascending=False).reset_index(drop=True)
 
+    log_info(f"产品销量统计完成: {len(result)} 个产品")
     return result
 
 
@@ -190,6 +194,7 @@ def compute_industry_stats(df: pd.DataFrame) -> pd.DataFrame:
         result[str(y)] = pivot[y]
 
     result = result.sort_values("行业总金额", ascending=False).reset_index(drop=True)
+    log_info(f"行业统计完成: {len(result)} 个行业, {year_range[-1]}-{year_range[0]} 年")
     return result
 
 
@@ -207,6 +212,7 @@ def get_secondary_industries(df: pd.DataFrame, primary: str) -> pd.DataFrame:
     subset = df[df["一级行业"] == primary]
     result = subset.groupby("二级行业")["最终客户名称"].nunique().reset_index(name="数量")
     result = result.sort_values("数量", ascending=False).reset_index(drop=True)
+    log_info(f"下钻二级行业 [{primary}]: {len(result)} 个")
     return result
 
 
@@ -227,6 +233,7 @@ def get_industry_customers(df: pd.DataFrame, primary: str, secondary: str) -> pd
         return pd.DataFrame(columns=["最终客户名称"])
     result = subset[["最终客户名称"]].drop_duplicates()
     result = result.sort_values("最终客户名称").reset_index(drop=True)
+    log_info(f"下钻客户名单 [{primary} / {secondary}]: {len(result)} 个")
     return result
 
 
@@ -272,4 +279,5 @@ def get_product_p_contracts(df: pd.DataFrame, product_name: str, merge_rules=Non
 
     result = pd.DataFrame(matched_rows)
     result = result.sort_values("合同金额（元）*", ascending=False).reset_index(drop=True)
+    log_info(f"产品关联合同查询 [{product_name}]: {len(result)} 条")
     return result
