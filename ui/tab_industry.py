@@ -397,37 +397,39 @@ class IndustryTab(BaseTab):
         cust_var = tk.StringVar(value=customer_name)
         cust_entry = ctk.CTkEntry(frame, textvariable=cust_var, width=260)
         cust_entry.grid(row=0, column=1, sticky="w", pady=(8, 4))
-        if customer_name:
-            cust_entry.configure(state="disabled")
 
-        # 搜索建议列表（仅新增模式下显示）
+        # 记录原客户名，编辑模式下改名需先删除旧规则
+        original_name = customer_name.strip()
+
+        # 搜索建议列表
         suggest_frame = ctk.CTkFrame(frame, fg_color="transparent")
         suggest_listbox = None
 
+        def _hide_suggestions():
+            nonlocal suggest_listbox
+            if suggest_listbox:
+                suggest_listbox.destroy()
+                suggest_listbox = None
+            suggest_frame.grid_forget()
+
         def _update_suggestions(*_):
             nonlocal suggest_listbox
-            if customer_name:
-                return
             query = cust_var.get().strip().lower()
             if not query:
-                if suggest_listbox:
-                    suggest_listbox.destroy()
-                    suggest_listbox = None
-                suggest_frame.grid_forget()
+                _hide_suggestions()
                 return
             matches = [n for n in customer_names if query in n.lower()][:10]
             if not matches:
-                if suggest_listbox:
-                    suggest_listbox.destroy()
-                    suggest_listbox = None
-                suggest_frame.grid_forget()
+                _hide_suggestions()
                 return
 
             suggest_frame.grid(row=1, column=1, sticky="ew", pady=(0, 4))
             if suggest_listbox:
                 suggest_listbox.destroy()
-            suggest_listbox = tk.Listbox(suggest_frame, height=min(len(matches), 6),
-                                         font=("Microsoft YaHei", 10), exportselection=False)
+            suggest_listbox = tk.Listbox(
+                suggest_frame, height=min(len(matches), 6),
+                font=("Microsoft YaHei", 10), exportselection=False,
+            )
             suggest_listbox.pack(fill=tk.BOTH, expand=True)
             for m in matches:
                 suggest_listbox.insert(tk.END, m)
@@ -435,25 +437,33 @@ class IndustryTab(BaseTab):
             def _on_select(event):
                 if suggest_listbox and suggest_listbox.curselection():
                     cust_var.set(suggest_listbox.get(suggest_listbox.curselection()[0]))
-                    if suggest_listbox:
-                        suggest_listbox.destroy()
-                        suggest_listbox = None
-                    suggest_frame.grid_forget()
+                    _hide_suggestions()
+                return "break"
 
-            suggest_listbox.bind("<<ListboxSelect>>", _on_select)
+            suggest_listbox.bind("<ButtonRelease-1>", _on_select)
 
         cust_var.trace_add("write", _update_suggestions)
 
-        # 失焦时收起建议列表
-        def _on_focus_out(event):
-            nonlocal suggest_listbox
-            if suggest_listbox:
-                dialog.after(150, lambda: (
-                    suggest_listbox.destroy() if suggest_listbox else None,
-                    suggest_frame.grid_forget(),
-                ))
+        # 回车选择第一条
+        def _on_entry_return(event):
+            if suggest_listbox and suggest_listbox.size():
+                suggest_listbox.select_set(0)
+                cust_var.set(suggest_listbox.get(0))
+                _hide_suggestions()
+            return "break"
 
-        cust_entry.bind("<FocusOut>", _on_focus_out)
+        cust_entry.bind("<Return>", _on_entry_return)
+
+        # 点击对话框其它区域收起建议列表
+        def _on_click_outside(event):
+            widget = event.widget
+            if widget in (cust_entry._entry, suggest_listbox):
+                return
+            if suggest_listbox and str(widget).startswith(str(suggest_listbox)):
+                return
+            _hide_suggestions()
+
+        dialog.bind("<Button-1>", _on_click_outside)
 
         # ------ 一级行业（仅可选择） ------
         ctk.CTkLabel(frame, text="一级行业:", font=FONT_MAIN).grid(
@@ -485,6 +495,9 @@ class IndustryTab(BaseTab):
                 primary = ""
             if secondary == "（无）":
                 secondary = ""
+            # 编辑时若客户名变更，先删除旧规则
+            if original_name and original_name != name:
+                remove_override(original_name)
             if not primary and not secondary:
                 remove_override(name)
             else:
