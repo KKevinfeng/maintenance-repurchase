@@ -49,6 +49,7 @@ class ProductSalesTab(BaseTab):
             tab_name="产品销量统计",
             columns=["产品名称", "售卖总台数"],
             on_double_click=on_double_click,
+            search_column="产品名称",
         )
         self.merge_rules: dict[str, set[str]] = _load_rules()
         self._on_data_change = on_data_change  # 合并规则变化时触发的回调

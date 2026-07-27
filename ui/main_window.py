@@ -21,6 +21,8 @@ from ui.tab_customer_category import CustomerCategoryTab
 from ui.tab_expiry_stats import ExpiryStatsTab
 from ui.tab_product_sales import ProductSalesTab
 from ui.tab_industry import IndustryTab
+from ui.tab_customer_profile import CustomerProfileTab
+from ui.tab_renewal_analysis import RenewalAnalysisTab
 from ui.detail_window import CustomerDetailWindow
 from ui.starred_cache import StarredCache
 from ui.starred_view import StarredView
@@ -145,7 +147,7 @@ class MaintenanceApp:
         tab_bar = ctk.CTkFrame(outer, fg_color="transparent")
         tab_bar.pack(fill=tk.X, anchor="w", pady=(0, 4))
 
-        self.tab_names = ["客户总金额统计", "客户分类金额统计", "过保情况统计", "产品销量统计", "行业统计"]
+        self.tab_names = ["客户总金额统计", "客户分类金额统计", "过保情况统计", "过保数据分析", "产品销量统计", "行业统计", "客户画像展示"]
         # Tab 栏 - 自定义按钮实现，支持选中白色文字/未选中黑色文字
         self.tab_buttons: dict[str, ctk.CTkButton] = {}
         btn_frame = ctk.CTkFrame(tab_bar, fg_color="transparent")
@@ -192,17 +194,31 @@ class MaintenanceApp:
             self.tab_content,
             on_double_click=None,
         )
+        self.tab_customer_profile = CustomerProfileTab(
+            self.tab_content,
+            on_double_click=None,
+            get_starred_names=self._get_starred_names,
+        )
+        self.tab_renewal_analysis = RenewalAnalysisTab(
+            self.tab_content,
+            expiry_tab=self.tab_expiry_stats,
+            main_df_provider=lambda: self.df,
+        )
+        # 过保情况统计加载数据后自动通知过保数据分析刷新
+        self.tab_expiry_stats._on_data_change = self.tab_renewal_analysis.refresh
 
         self.tabs = [
             self.tab_customer_total,
             self.tab_customer_category,
             self.tab_product_sales,
             self.tab_industry,
+            self.tab_customer_profile,
         ]  # 仅包含使用共享 df 的 Tab（不含过保情况统计）
 
         for tab in self.tabs:
             tab.build()
         self.tab_expiry_stats.build()  # 过保情况统计独立构建
+        self.tab_renewal_analysis.build()  # 过保数据分析独立构建
 
         self._switch_tab(self.tab_names[0])
 
@@ -212,6 +228,7 @@ class MaintenanceApp:
         for tab in self.tabs:
             tab.frame.pack_forget()
         self.tab_expiry_stats.frame.pack_forget()
+        self.tab_renewal_analysis.frame.pack_forget()
         if name == self.tab_names[0]:
             self.tab_customer_total.frame.pack(fill=tk.BOTH, expand=True)
         elif name == self.tab_names[1]:
@@ -219,9 +236,16 @@ class MaintenanceApp:
         elif name == self.tab_names[2]:
             self.tab_expiry_stats.frame.pack(fill=tk.BOTH, expand=True)
         elif name == self.tab_names[3]:
-            self.tab_product_sales.frame.pack(fill=tk.BOTH, expand=True)
+            self.tab_renewal_analysis.frame.pack(fill=tk.BOTH, expand=True)
+            # 首次切到过保数据分析时自动加载
+            if self.tab_renewal_analysis.source_df is None:
+                self.tab_renewal_analysis.load_data()
         elif name == self.tab_names[4]:
+            self.tab_product_sales.frame.pack(fill=tk.BOTH, expand=True)
+        elif name == self.tab_names[5]:
             self.tab_industry.frame.pack(fill=tk.BOTH, expand=True)
+        elif name == self.tab_names[6]:
+            self.tab_customer_profile.frame.pack(fill=tk.BOTH, expand=True)
         self._update_tab_button_style(name)
 
     def _update_tab_button_style(self, active_name: str):
@@ -293,7 +317,7 @@ class MaintenanceApp:
         ).pack(pady=(0, 16))
 
         ctk.CTkLabel(
-            frame, text="版本信息：2.2.1.6", font=FONT_MAIN,
+            frame, text="版本信息：2.3.1.1", font=FONT_MAIN,
             anchor="w", justify="left",
         ).pack(anchor="w", pady=(0, 6), fill=tk.X)
 
@@ -359,20 +383,22 @@ class MaintenanceApp:
         StarredInputDialog(self.root, self.starred_cache, on_done=on_done)
 
     def _on_star_toggle(self, customer_name: str, is_starred: bool):
-        """标星切换回调：更新缓存。"""
+        """标星切换回调：更新缓存并刷新客户画像 Tab。"""
         if is_starred:
             self.starred_cache.add(customer_name)
             log_info(f"标星客户: {customer_name}")
         else:
             self.starred_cache.remove(customer_name)
             log_info(f"取消标星客户: {customer_name}")
+        # 同步刷新客户画像 Tab（重点客户标记需要实时更新）
+        self._refresh_tab_profile()
 
     def _get_starred_names(self) -> list[str]:
         """供 Tab 获取当前标星客户名称列表。"""
         return self.starred_cache.get_all()
 
     def _load_file(self):
-        """后台线程加载 Excel 文件并刷新所有 Tab，弹窗显示进度。"""
+        """后台线程仅做文件读取（IO 操作），计算与刷新在主线程逐步执行以保持 UI 响应。"""
         filepath = self.file_path_var.get().strip()
         if not filepath:
             messagebox.showwarning("提示", "请先选择 Excel 文件")
@@ -384,13 +410,16 @@ class MaintenanceApp:
 
         self._load_error: str | None = None
         self._load_df: pd.DataFrame | None = None
-        self._tab_results: list | None = None
-        self._load_ticks = 0
+        self._load_step: int = 0
+        self._load_filepath: str = filepath
 
-        popup = ProgressPopup(self.root, title="正在导入合同数据...")
+        # 立即弹出进度窗口，显示 0%
+        self._popup = ProgressPopup(self.root, title="正在导入合同数据...")
+        self._popup.set_progress(0.0, "正在读取文件...")
 
         def worker():
             try:
+                # 仅做文件 IO：读 Excel + 提取列（IO 密集，GIL 在 IO 时自动释放，不会阻塞 UI）
                 raw_df = pd.read_excel(filepath, header=1)
                 col_map: dict[str, str] = {}
                 missing: list[str] = []
@@ -409,15 +438,10 @@ class MaintenanceApp:
 
                 result_df = raw_df[list(col_map.values())].rename(
                     columns={v: k for k, v in col_map.items()}
-                )
+                ).copy()  # 在主线程中使用的 DataFrame 先做 copy
                 self._load_df = result_df
 
                 log_info(f"数据文件加载成功: {filepath}，共 {len(result_df)} 行")
-                results = []
-                for i, tab in enumerate(self.tabs):
-                    computed = tab.compute_data(result_df)
-                    results.append((tab, computed))
-                self._tab_results = results
             except FileNotFoundError:
                 self._load_error = f"文件不存在：\n{filepath}"
                 log_error(f"文件不存在：{filepath}")
@@ -427,36 +451,68 @@ class MaintenanceApp:
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
-        self.root.after(100, self._poll_load_done, thread, filepath, popup)
+        self.root.after(50, self._poll_file_read, thread)
 
-    def _poll_load_done(self, thread: threading.Thread, filepath: str, popup: ProgressPopup):
-        """轮询后台线程，更新弹窗进度；完成后回到主线程更新 UI。"""
+    def _poll_file_read(self, thread: threading.Thread):
+        """轮询文件读取线程；完成后再回到主线程逐步计算各 Tab。"""
         if thread.is_alive():
-            self._load_ticks += 1
-            pct = 0.9 * (1 - 0.95 ** self._load_ticks)
-            popup.set_progress(pct, f"正在加载数据… {int(pct * 100)}%")
-            self.root.after(100, self._poll_load_done, thread, filepath, popup)
+            self._popup.set_progress(0.05, "正在读取 Excel 文件...")
+            self.root.after(50, self._poll_file_read, thread)
             return
 
-        self._loading = False
-
         if self._load_error:
-            popup.close()
-            # 延迟弹错误提示，确保进度弹窗已完全销毁
+            self._popup.close()
+            self._loading = False
             self.root.after(100, lambda: messagebox.showerror("错误", self._load_error))
             self.status_var.set("就绪 — 请选择 Excel 文件")
             return
 
         self.df = self._load_df
-        popup.set_progress(0.95, "正在刷新界面...")
+        self._load_step = 0  # 从第 0 个 Tab 开始计算
+        self._popup.set_progress(0.10, "文件读取完成，开始统计...")
+        self.root.update()
+        self.root.after(20, self._compute_next_tab)
 
-        for tab, computed in self._tab_results:
+    def _compute_next_tab(self):
+        """在主线程逐个计算并刷新 Tab，每完成一个就更新进度条并调用 root.update()。"""
+        total = len(self.tabs)
+        i = self._load_step
+
+        if i >= total:
+            # 全部完成
+            self._finish_loading()
+            return
+
+        tab = self.tabs[i]
+        label = self.tab_names[i] if i < len(self.tab_names) else f"Tab{i+1}"
+        progress = 0.10 + 0.85 * ((i + 1) / total)
+        self._popup.set_progress(progress, f"正在统计: {label} ({i+1}/{total})...")
+        self.root.update()
+
+        try:
+            computed = tab.compute_data(self.df)
             tab.populate(computed)
+        except Exception as e:
+            log_error(f"Tab {label} 计算失败: {e}")
 
-        popup.close()
-        self.status_var.set(f"已加载 {len(self.df)} 行数据 — {filepath}")
+        self._load_step += 1
+        self.root.after(10, self._compute_next_tab)
 
-        # 延迟触发碰撞检测，确保进度弹窗已完全销毁
+    def _finish_loading(self):
+        """加载收尾：刷新过保数据分析、100%、关闭弹窗。"""
+        self._loading = False
+
+        # 主合同数据加载后刷新过保数据分析（用于维保金额查询）
+        try:
+            if self.tab_expiry_stats.source_df is not None:
+                self.tab_renewal_analysis.refresh()
+        except Exception as e:
+            log_error(f"过保数据分析刷新失败: {e}")
+
+        self._popup.set_progress(1.0, "加载完成！")
+        self._popup.close()
+        self.status_var.set(f"已加载 {len(self.df)} 行数据 — {self._load_filepath}")
+
         self.root.after(100, self._check_starred_collision)
 
     def _check_starred_collision(self):
@@ -494,6 +550,16 @@ class MaintenanceApp:
         except Exception as e:
             log_error("数据处理失败")
             messagebox.showerror("错误", f"数据处理失败：\n{e}")
+
+    def _refresh_tab_profile(self):
+        """仅刷新客户画像 Tab（标星变更时调用）。"""
+        if self.df is None:
+            return
+        try:
+            computed = self.tab_customer_profile.compute_data(self.df)
+            self.tab_customer_profile.populate(computed)
+        except Exception as e:
+            log_error(f"刷新客户画像 Tab 失败: {e}")
 
     def _on_product_sales_data_change(self):
         """产品名称合并规则变化后，仅刷新产品销量 Tab。"""

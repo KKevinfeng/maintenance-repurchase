@@ -26,6 +26,7 @@ class CustomerCategoryTab(BaseTab):
                 "合计总金额",
             ],
             on_double_click=on_double_click,
+            search_column="最终客户名称",
         )
 
     def compute_data(self, raw_df):

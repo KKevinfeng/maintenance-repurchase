@@ -17,6 +17,8 @@ maintenance-repurchase-1/
 ├── industry_dict.json              # 行业数据字典（一级/二级行业映射）
 ├── industry_overrides.json         # 行业覆盖规则（人工修正客户行业）
 ├── starred_customers.xlsx          # 重点客户缓存文件
+├── renewal_details.xlsx            # 续保明细缓存（已续保合同编号）
+├── gift_channels.xlsx              # 大礼包渠道标记缓存
 │
 ├── logs/                           # 运行日志目录（按天归档，5MB 轮转）
 │   ├── run_YYYY-MM-DD.log          # 运行日志
@@ -30,8 +32,9 @@ maintenance-repurchase-1/
     ├── tab_customer_total.py       # Tab1 — 客户总金额统计（分年透视）
     ├── tab_customer_category.py    # Tab2 — 客户分类金额统计（维保/产品/服务）
     ├── tab_expiry_stats.py         # Tab3 — 过保情况统计（含意向筛选）
-    ├── tab_product_sales.py        # Tab4 — 产品销量统计（含产品合并规则）
-    ├── tab_industry.py             # Tab5 — 行业统计（客户数/金额/分年，支持下钻）
+    ├── tab_renewal_analysis.py    # Tab4 — 过保数据分析（P类合同续保追踪、大礼包标记）
+    ├── tab_product_sales.py        # Tab5 — 产品销量统计（含产品合并规则）
+    ├── tab_industry.py             # Tab6 — 行业统计（客户数/金额/分年，支持下钻）
     │
     ├── industry_dict.py            # 行业数据字典管理（增删一级/二级行业）
     ├── industry_overrides.py       # 行业覆盖规则管理（客户行业人工修正）
@@ -56,8 +59,9 @@ maintenance-repurchase-1/
 | Tab1 | 客户总金额统计 | 按客户分年统计合同总金额，支持标星重点客户 |
 | Tab2 | 客户分类金额统计 | 按维保(M)/产品(P)/服务(S)三类统计各客户金额 |
 | Tab3 | 过保情况统计 | 追踪重点客户的续保意向和不续保原因 |
-| Tab4 | 产品销量统计 | 按产品名称汇总售卖台数，支持产品名称合并 |
-| Tab5 | 行业统计 | 按一级行业统计客户数量、总金额及分年金额，支持下钻到二级行业和客户明细 |
+| Tab4 | 过保数据分析 | P类合同续保追踪、大礼包渠道红色高亮标记 |
+| Tab5 | 产品销量统计 | 按产品名称汇总售卖台数，支持产品名称合并 |
+| Tab6 | 行业统计 | 按一级行业统计客户数量、总金额及分年金额，支持下钻到二级行业和客户明细 |
 
 ## 运行环境
 

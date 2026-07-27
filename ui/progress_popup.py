@@ -43,6 +43,9 @@ class ProgressPopup:
         self.bar.set(0)
         self.bar.pack(fill="x", padx=28, pady=(0, 16))
         self.win.grab_set()
+        self.win.lift()
+        self.win.focus_force()
+        self.win.update()  # 强制渲染窗口，避免主线程阻塞导致弹窗延迟
 
     def set_progress(self, value: float, status: str = ""):
         """设置进度 0.0 ~ 1.0，可附带状态文字。"""
@@ -50,13 +53,9 @@ class ProgressPopup:
         self.pct_label.configure(text=f"{int(value * 100)}%")
         if status:
             self.status_label.configure(text=status)
-        self.win.update_idletasks()
+        self.win.update()  # 使用 update 确保进度条立即重绘
 
     def close(self):
-        """快速跳到 100% 然后立即关闭，释放模态抓取。"""
-        self.bar.set(1.0)
-        self.pct_label.configure(text="100%")
-        self.status_label.configure(text="加载完成")
-        self.win.update_idletasks()
+        """释放模态抓取并立即关闭弹窗。"""
         self.win.grab_release()
         self.win.destroy()

@@ -33,6 +33,7 @@ class ExpiryStatsTab:
         self.sort_asc: bool = True
         self.active_filters: dict[str, set] = {}  # 列名 -> 已选值集合
         self.filter_btns: dict[str, ctk.CTkButton] = {}
+        self.root = self.master.winfo_toplevel()
 
     def build(self) -> ctk.CTkFrame:
         """构建 Tab 内容：导入区 + 表格。"""
@@ -118,7 +119,7 @@ class ExpiryStatsTab:
             self._load_file()
 
     def _load_file(self):
-        """后台线程加载 Excel 并展示，弹窗显示进度。"""
+        """后台线程仅读取文件，主线程分阶段处理并更新弹窗进度。"""
         filepath = self.file_path_var.get().strip()
         if not filepath:
             messagebox.showwarning("提示", "请先选择 Excel 文件")
@@ -130,10 +131,11 @@ class ExpiryStatsTab:
 
         self._load_error: str | None = None
         self._load_df: pd.DataFrame | None = None
-        self._load_ticks = 0
 
-        root = self.master.winfo_toplevel()
-        popup = ProgressPopup(root, title="正在导入过保情况数据...")
+        # 立即弹出进度窗口，显示 0%
+        self._popup = ProgressPopup(self.root, title="正在导入过保情况数据...")
+        self._popup.set_progress(0.0, "正在读取文件...")
+        self.root.update()
 
         def worker():
             try:
@@ -142,8 +144,8 @@ class ExpiryStatsTab:
                     log_error(f"过保情况文件内容为空: {filepath}")
                     self._load_error = "文件内容为空"
                     return
-                log_info(f"过保情况文件加载成功: {filepath}，共 {len(df)} 行")
                 self._load_df = df
+                log_info(f"过保情况文件加载成功: {filepath}，共 {len(df)} 行")
             except FileNotFoundError:
                 log_error(f"加载过保情况文件失败：文件不存在 - {filepath}")
                 self._load_error = f"文件不存在：\n{filepath}"
@@ -153,22 +155,18 @@ class ExpiryStatsTab:
 
         thread = threading.Thread(target=worker, daemon=True)
         thread.start()
-        root.after(100, self._poll_load_done, thread, popup)
+        self.root.after(50, self._poll_file_read, thread)
 
-    def _poll_load_done(self, thread: threading.Thread, popup: ProgressPopup):
-        """轮询后台线程，更新弹窗进度；完成后回到主线程更新 UI。"""
+    def _poll_file_read(self, thread: threading.Thread):
+        """轮询文件读取线程；完成后在主线程处理数据并分块填充表格。"""
         if thread.is_alive():
-            self._load_ticks += 1
-            pct = 0.9 * (1 - 0.95 ** self._load_ticks)
-            popup.set_progress(pct, f"正在加载数据… {int(pct * 100)}%")
-            root = self.master.winfo_toplevel()
-            root.after(100, self._poll_load_done, thread, popup)
+            self._popup.set_progress(0.05, "正在读取 Excel 文件...")
+            self.root.after(50, self._poll_file_read, thread)
             return
 
-        self._loading = False
-
         if self._load_error:
-            popup.close()
+            self._popup.close()
+            self._loading = False
             messagebox.showerror("错误", self._load_error)
             return
 
@@ -176,11 +174,27 @@ class ExpiryStatsTab:
         self.active_filters.clear()
         self.sort_col = None
         self.sort_asc = True
-        popup.set_progress(0.95, "正在生成表格...")
-        self._fill_tree(self._load_df)
+
+        # 主线程处理数据
+        self._popup.set_progress(0.10, "正在处理过保数据...")
+        self.root.update()
+
+        # 分块填充表格（treeview 行数多时一次性插入会卡 UI），_fill_tree 内部负责完成收尾
+        self._fill_tree(self._load_df, popup=self._popup)
+
+    def _finish_loading(self):
+        """加载收尾：生成筛选栏、通知 Tab7、关闭弹窗。"""
         self._build_filter_bar()
-        popup.close()
+        self._popup.set_progress(1.0, "加载完成！")
+        self._popup.close()
+        self._loading = False
+
         log_info(f"过保情况表格渲染完成，共 {len(self._load_df)} 行")
+
+        # 通知 Tab7 刷新
+        if hasattr(self, "_on_data_change") and self._on_data_change:
+            self._on_data_change()
+
 
     # ── 筛选重点客户过保合同 ─────────────────────────────────
 
@@ -281,7 +295,7 @@ class ExpiryStatsTab:
         result += [c for c in cols if c not in result]
         return result
 
-    def _fill_tree(self, df: pd.DataFrame) -> None:
+    def _fill_tree(self, df: pd.DataFrame, popup: ProgressPopup | None = None) -> None:
         """将 DataFrame 填入 Treeview。"""
         self._display_df = df.copy()  # 保存当前显示数据，供导出使用
         tree = self.tree
@@ -312,6 +326,8 @@ class ExpiryStatsTab:
 
         tree.delete(*tree.get_children())
 
+        # 预计算所有行数据
+        rows = []
         for idx, (_, row) in enumerate(df.iterrows(), 1):
             values = [str(idx)]
             for col in reordered_cols:
@@ -319,7 +335,40 @@ class ExpiryStatsTab:
                 val = self._fmt_val(val)
                 values.append(val)
             tag = "odd" if idx % 2 == 1 else "even"
-            tree.insert("", tk.END, values=values, tags=(tag, "center"))
+            rows.append((values, tag))
+
+        if not popup:
+            # 普通刷新：直接插入
+            for values, tag in rows:
+                tree.insert("", tk.END, values=values, tags=(tag, "center"))
+            return
+
+        # 初始加载：分块插入并更新进度条
+        total = len(rows)
+        if total == 0:
+            popup.set_progress(1.0, "加载完成！")
+            self.root.after(10, self._finish_loading)
+            return
+
+        chunk_size = 400
+        inserted = 0
+
+        def insert_chunk():
+            nonlocal inserted
+            end = min(inserted + chunk_size, total)
+            for i in range(inserted, end):
+                values, tag = rows[i]
+                tree.insert("", tk.END, values=values, tags=(tag, "center"))
+            inserted = end
+            progress = 0.20 + 0.75 * (end / total)
+            popup.set_progress(progress, f"正在填充表格... ({end}/{total})")
+            self.root.update()
+            if end < total:
+                tree.after(5, insert_chunk)
+            else:
+                self.root.after(10, self._finish_loading)
+
+        insert_chunk()
 
     # ── 筛选栏 ───────────────────────────────────────────────
 

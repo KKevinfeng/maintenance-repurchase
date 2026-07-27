@@ -17,6 +17,7 @@ class CustomerTotalTab(BaseTab):
             has_star=True,
             on_star_toggle=on_star_toggle,
             get_starred_names=get_starred_names,
+            search_column="最终客户名称",
         )
 
     def compute_data(self, raw_df):
