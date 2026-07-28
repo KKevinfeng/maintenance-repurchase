@@ -42,10 +42,8 @@ class RenewalAnalysisTab:
         self.filter_year: set[str] | None = None  # None=未筛选，set=按年份集合筛选，空集合=无结果
         self.active_filters: dict[str, set[str] | None] = {}  # 列值筛选（客户意向、不续保原因等）
 
-        # 续保明细 {关联老合同: 续保合同号}
-        self._renewal_map: dict[str, str] = {}
-        # 续保明细客户名称 {关联老合同: 客户名称}
-        self._renewal_customer: dict[str, str] = {}
+        # 续保明细 [(关联老合同, 续保合同号, 客户名称), ...] — 支持一对多
+        self._renewal_details: list[tuple[str, str, str]] = []
 
         # 大礼包渠道名称集合（命中 Tab3 最终客户时标红）
         self._gift_channels: set[str] = set()
@@ -286,7 +284,7 @@ class RenewalAnalysisTab:
 
         if display_df.empty:
             count = len(df)
-            renewed_count = len(self._renewal_map)
+            renewed_count = len({o for o, _, _ in self._renewal_details})
             self._hint_label.configure(
                 text=f"已加载 {count} 条 P 类合同 / 已续保 {renewed_count} 条"
                 + ("（当前筛选结果为空）" if count > 0 else "")
@@ -296,9 +294,10 @@ class RenewalAnalysisTab:
         for idx, (_, row) in enumerate(display_df.iterrows(), 1):
             contract = str(row["合同编码"]) if pd.notna(row["合同编码"]) else ""
             customer = str(row["最终客户名称"]) if pd.notna(row["最终客户名称"]) else ""
+            expiry_year = str(row["过保年份"]) if pd.notna(row["过保年份"]) else ""
             # 大礼包碰撞使用原始"最终客户"字段，而非 _resolve_customer 解析后的值
             orig_enduser = str(row["_原始最终客户"]) if pd.notna(row["_原始最终客户"]) else ""
-            is_renewed = self._is_contract_renewed(contract, customer)
+            is_renewed = self._is_contract_renewed(contract, customer, expiry_year)
             is_gift = orig_enduser in self._gift_channels
             if is_gift:
                 if is_renewed:
@@ -324,7 +323,7 @@ class RenewalAnalysisTab:
             tree.insert("", tk.END, values=values, tags=tags)
 
         count = len(df)
-        renewed_count = len(self._renewal_map)
+        renewed_count = len({o for o, _, _ in self._renewal_details})
         self._hint_label.configure(
             text=f"已加载 {count} 条 P 类合同 / 已续保 {renewed_count} 条"
         )
@@ -348,14 +347,16 @@ class RenewalAnalysisTab:
                     lambda r: self._is_contract_renewed(
                         str(r["合同编码"]) if pd.notna(r["合同编码"]) else "",
                         str(r["最终客户名称"]) if pd.notna(r["最终客户名称"]) else "",
+                        str(r["过保年份"]) if pd.notna(r["过保年份"]) else "",
                     ), axis=1,
                 )]
             elif "N" in self.filter_has_renewed and "Y" not in self.filter_has_renewed:
-                # 仅显示未有续保合同（未标绿的），同时考虑客户名称匹配
+                # 仅显示未有续保合同（未标绿的），同时考虑客户名称匹配和年份匹配
                 result = result[~result.apply(
                     lambda r: self._is_contract_renewed(
                         str(r["合同编码"]) if pd.notna(r["合同编码"]) else "",
                         str(r["最终客户名称"]) if pd.notna(r["最终客户名称"]) else "",
+                        str(r["过保年份"]) if pd.notna(r["过保年份"]) else "",
                     ), axis=1,
                 )]
             else:
@@ -731,8 +732,8 @@ class RenewalAnalysisTab:
         """打开续保明细管理弹窗。"""
         self._load_renewal_details()
 
-        # 构建数据列表 (关联老合同, 续保合同号, 客户名称)
-        details = [(k, v, self._renewal_customer.get(k, "")) for k, v in self._renewal_map.items()]
+        # 数据列表直接来自 _renewal_details
+        details = list(self._renewal_details)
 
         win = ctk.CTkToplevel(self.frame)
         win.title("续保明细管理")
@@ -813,16 +814,10 @@ class RenewalAnalysisTab:
                 c = cust_var.get().strip()
                 if not n:
                     return
-                # 如果关联老合同已存在，更新；否则新增
-                for i, (k, v, _) in enumerate(details):
-                    if k == o:
-                        details[i] = (o, n, c)
-                        break
-                else:
-                    if o:
-                        details.append((o, n, c))
-                    else:
-                        details.append((n, n, c))  # 无老合同时用续保合同号做主键
+                if not o:
+                    o = n  # 无老合同时用续保合同号做主键
+                # 一对多：老合同号重复时仍追加为新行
+                details.append((o, n, c))
                 _refresh_table()
                 dlg.destroy()
 
@@ -887,13 +882,7 @@ class RenewalAnalysisTab:
             _refresh_table()
 
         def _save_and_close():
-            # 写回 renewal_map 和 renewal_customer
-            self._renewal_map.clear()
-            self._renewal_customer.clear()
-            for old, new, cust in details:
-                self._renewal_map[old] = new
-                if cust:
-                    self._renewal_customer[old] = cust
+            self._renewal_details = list(details)
             self._save_renewal_details()
             self._recalculate_renewal_columns()
             self._fill_tree()
@@ -922,9 +911,8 @@ class RenewalAnalysisTab:
     # ── 续保明细 Excel 缓存 ──────────────────────────────────
 
     def _load_renewal_details(self) -> None:
-        """从 Excel 文件加载续保明细。"""
-        self._renewal_map.clear()
-        self._renewal_customer.clear()
+        """从 Excel 文件加载续保明细（支持一对多）。"""
+        self._renewal_details.clear()
         try:
             if os.path.exists(RENEWAL_FILE):
                 df = pd.read_excel(RENEWAL_FILE)
@@ -933,9 +921,7 @@ class RenewalAnalysisTab:
                     new = str(row.get("续保合同号", "")).strip()
                     cust = str(row.get("客户名称", "")).strip() if "客户名称" in df.columns else ""
                     if old and new:
-                        self._renewal_map[old] = new
-                        if cust:
-                            self._renewal_customer[old] = cust
+                        self._renewal_details.append((old, new, cust))
         except Exception as e:
             log_error(f"加载续保明细失败: {e}")
 
@@ -943,34 +929,59 @@ class RenewalAnalysisTab:
         """保存续保明细到 Excel 文件。"""
         try:
             df = pd.DataFrame([
-                {
-                    "关联老合同": k,
-                    "续保合同号": v,
-                    "客户名称": self._renewal_customer.get(k, ""),
-                }
-                for k, v in self._renewal_map.items()
+                {"关联老合同": old, "续保合同号": new, "客户名称": cust}
+                for old, new, cust in self._renewal_details
             ])
             df.to_excel(RENEWAL_FILE, index=False)
             log_info(f"续保明细已保存: {len(df)} 条")
         except Exception as e:
             log_error(f"保存续保明细失败: {e}")
 
-    def _is_contract_renewed(self, contract: str, customer: str) -> bool:
-        """判断合同是否已续保：合同编码命中续保明细，且客户名称一致（若续保明细有客户名称字段）。"""
-        if not contract or contract not in self._renewal_map:
+    def _is_contract_renewed(self, contract: str, customer: str, expiry_year: str = "") -> bool:
+        """判断合同是否已续保：合同编码命中续保明细，且客户名称一致，且续保合同年份等于过保年份。"""
+        if not contract:
             return False
-        cust_in_map = self._renewal_customer.get(contract, "").strip()
-        if not cust_in_map:
-            # 续保明细中无客户名称（历史数据），仅按合同编码匹配
-            return True
-        return cust_in_map == customer
+        for old, n, cust in self._renewal_details:
+            if old != contract:
+                continue
+            # 年份匹配：续保合同年份必须等于过保年份
+            if expiry_year:
+                renewal_year = extract_contract_year(n)
+                if renewal_year is None or str(renewal_year) != expiry_year:
+                    continue
+            map_cust = cust.strip() if cust else ""
+            if not map_cust:
+                # 续保明细中无客户名称（历史数据），仅按合同编码匹配
+                return True
+            if map_cust == customer:
+                return True
+        return False
 
     def _recalculate_renewal_columns(self) -> None:
         """根据当前续保明细重新计算 source_df 中的维保合同和维保金额列。"""
         if self.source_df is None or self.source_df.empty:
             return
-        self.source_df["维保合同"] = self.source_df["合同编码"].map(self._renewal_map).fillna("")
-        self.source_df["维保金额"] = self.source_df["维保合同"].apply(self._lookup_main_amount)
+        # 构建 {旧合同: [续保合同列表]}
+        renewal_lookup: dict[str, list[str]] = {}
+        for old, new, _ in self._renewal_details:
+            renewal_lookup.setdefault(old, []).append(new)
+        self.source_df["维保合同"] = self.source_df["合同编码"].apply(
+            lambda c: ", ".join(renewal_lookup.get(c, [])) if c else ""
+        )
+        # 维保金额：对每条续保合同分别查金额后求和
+        def _sum_amount(codes_str: str) -> str:
+            if not codes_str:
+                return ""
+            total = 0.0
+            for code in codes_str.split(", "):
+                amt = self._lookup_main_amount(code)
+                if amt:
+                    try:
+                        total += float(amt.replace(",", ""))
+                    except (ValueError, TypeError):
+                        pass
+            return f"{total:,.2f}" if total else ""
+        self.source_df["维保金额"] = self.source_df["维保合同"].apply(_sum_amount)
 
     # ── 大礼包渠道标记 ───────────────────────────────────────
 
@@ -1184,8 +1195,13 @@ class RenewalAnalysisTab:
             messagebox.showwarning("提示", "没有数据可导出", parent=self.frame)
             return
         export_df = self._apply_filters(df)
-        # 添加续保合同号列
-        export_df["续保合同号"] = export_df["合同编码"].map(self._renewal_map).fillna("")
+        # 添加续保合同号列（一对多：逗号合并）
+        renewal_lookup: dict[str, list[str]] = {}
+        for old, new, _ in self._renewal_details:
+            renewal_lookup.setdefault(old, []).append(new)
+        export_df["续保合同号"] = export_df["合同编码"].apply(
+            lambda c: ", ".join(renewal_lookup.get(c, [])) if c in renewal_lookup else ""
+        )
         export_to_csv(export_df, self.frame, "过保数据分析.csv")
 
     # ── 数据刷新 ──────────────────────────────────────────────
@@ -1205,7 +1221,7 @@ class RenewalAnalysisTab:
 
         # 主线程预先加载续保明细快照，避免线程竞争
         self._load_renewal_details()
-        renewal_snapshot = dict(self._renewal_map)
+        renewal_snapshot = list(self._renewal_details)
 
         expiry_df = self.expiry_tab.source_df
 
@@ -1237,7 +1253,7 @@ class RenewalAnalysisTab:
             self._show_filter_bar()
             self._fill_tree()
 
-    def _process_data(self, expiry_df: pd.DataFrame, renewal_snapshot: dict) -> pd.DataFrame:
+    def _process_data(self, expiry_df: pd.DataFrame, renewal_snapshot: list) -> pd.DataFrame:
         """后台线程：处理 Tab3 数据，返回整理后的 DataFrame。"""
         df = expiry_df.copy()
 
@@ -1322,10 +1338,27 @@ class RenewalAnalysisTab:
         # 负责销售：按最终客户名称取首次匹配的销售跟踪人
         result["负责销售"] = result["最终客户名称"].map(sales_map).fillna("")
 
-        # 维保合同（从续保明细查 续保合同号）
-        result["维保合同"] = result["合同编码"].map(renewal_snapshot).fillna("")
-        # 维保金额（从主合同文件查 合同编号* == 维保合同 的 合同金额（元）*）
-        result["维保金额"] = result["维保合同"].apply(self._lookup_main_amount)
+        # 维保合同（从续保明细查 续保合同号，支持一对多，逗号合并）
+        renewal_lookup: dict[str, list[str]] = {}
+        for old, new, _ in renewal_snapshot:
+            renewal_lookup.setdefault(old, []).append(new)
+        result["维保合同"] = result["合同编码"].apply(
+            lambda c: ", ".join(renewal_lookup.get(c, [])) if c in renewal_lookup else ""
+        )
+        # 维保金额：对每条续保合同分别查金额后求和
+        def _sum_amount(codes_str: str) -> str:
+            if not codes_str:
+                return ""
+            total = 0.0
+            for code in codes_str.split(", "):
+                amt = self._lookup_main_amount(code)
+                if amt:
+                    try:
+                        total += float(amt.replace(",", ""))
+                    except (ValueError, TypeError):
+                        pass
+            return f"{total:,.2f}" if total else ""
+        result["维保金额"] = result["维保合同"].apply(_sum_amount)
 
         result["_year"] = result["合同编码"].apply(extract_contract_year)
         result["_year"] = result["_year"].fillna(0).astype(int)
