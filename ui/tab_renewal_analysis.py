@@ -488,33 +488,34 @@ class RenewalAnalysisTab:
         )
         header.pack(fill=tk.X, padx=16, pady=(12, 4))
 
-        # ── 产品明细 ──
-        product_label = ctk.CTkLabel(
-            dlg, text=f"产品明细（共 {len(product_lines)} 条）", font=FONT_BOLD, anchor="w",
-        )
-        product_label.pack(fill=tk.X, padx=16, pady=(8, 2))
+        def _add_scroll_text(parent, title: str, text: str, line_count: int) -> None:
+            """添加一个带滚动条的只读文本框，高度按内容自适应但不超过 8 行。"""
+            label = ctk.CTkLabel(
+                parent, text=f"{title}（共 {line_count} 条）", font=FONT_BOLD, anchor="w",
+            )
+            label.pack(fill=tk.X, padx=16, pady=(8, 2))
 
-        product_box = tk.Text(
-            dlg, wrap=tk.WORD, font=("Microsoft YaHei UI", 11),
-            relief=tk.FLAT, borderwidth=0,
-        )
-        product_box.insert("1.0", product_text)
-        product_box.configure(state="disabled")
-        product_box.pack(fill=tk.BOTH, expand=True, padx=16, pady=(2, 8))
+            frame = ctk.CTkFrame(parent)
+            frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(2, 8))
+
+            text_box = tk.Text(
+                frame, wrap=tk.WORD, font=("Microsoft YaHei UI", 11),
+                relief=tk.FLAT, borderwidth=0,
+                height=min(max(line_count, 2), 8),
+            )
+            text_box.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            text_box.insert("1.0", text)
+            text_box.configure(state="disabled")
+
+            scrollbar = ctk.CTkScrollbar(frame, command=text_box.yview)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            text_box.configure(yscrollcommand=scrollbar.set)
+
+        # ── 产品明细 ──
+        _add_scroll_text(dlg, "产品明细", product_text, len(product_lines))
 
         # ── 续保明细 ──
-        renewal_label = ctk.CTkLabel(
-            dlg, text=f"续保明细（共 {len(renewal_lines)} 条）", font=FONT_BOLD, anchor="w",
-        )
-        renewal_label.pack(fill=tk.X, padx=16, pady=(8, 2))
-
-        renewal_box = tk.Text(
-            dlg, wrap=tk.WORD, font=("Microsoft YaHei UI", 11),
-            relief=tk.FLAT, borderwidth=0,
-        )
-        renewal_box.insert("1.0", renewal_text)
-        renewal_box.configure(state="disabled")
-        renewal_box.pack(fill=tk.BOTH, expand=True, padx=16, pady=(2, 12))
+        _add_scroll_text(dlg, "续保明细", renewal_text, len(renewal_lines))
 
         ctk.CTkButton(
             dlg, text="关闭", command=dlg.destroy,
