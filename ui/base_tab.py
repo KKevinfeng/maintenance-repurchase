@@ -398,42 +398,13 @@ class BaseTab:
         self._sync_widths(df)
 
     def _sync_widths(self, df: pd.DataFrame) -> None:
-        """按内容自适应设置列宽：总内容宽度不超容器时均分剩余空间，超出时保留内容宽度。"""
+        """按内容自适应设置列宽：设置 width/minwidth 为内容宽度并 stretch=True，
+        ttk 会自动填充剩余空间，但不会压缩到低于内容宽度，超出时出滚动条。"""
         tree = self.tree
         data_cols = list(df.columns)
 
         # 内容自适应宽度（数据列）
         content_widths = self._calc_content_widths(df)
-
-        # 固定列宽度
-        star_fixed = 50 if self.has_star else 0
-        seq_fixed = 50
-
-        # 获取 Treeview 实际可用宽度
-        try:
-            self.master.update_idletasks()
-            tree_width = self.tree.winfo_width()
-            if tree_width <= 1:
-                tree_width = self.master.winfo_width()
-            # 减去滚动条/边距预留
-            avail = max(300, tree_width - star_fixed - seq_fixed - 16)
-        except Exception:
-            avail = 1200
-
-        # 所有可分配宽度的列：数据列 + 序号列
-        alloc_cols = [self.SEQ_COL] + data_cols
-        total_content = seq_fixed + sum(content_widths.get(col, 160) for col in data_cols)
-
-        if total_content <= avail:
-            # 空间充裕：每列在内容宽度基础上均分剩余空间
-            extra = avail - total_content
-            per_col_extra = extra // max(1, len(alloc_cols))
-            widths = {col: content_widths.get(col, 160) + per_col_extra for col in data_cols}
-            widths[self.SEQ_COL] = seq_fixed + per_col_extra
-        else:
-            # 空间不足：严格按内容宽度显示，出现水平滚动条
-            widths = content_widths.copy()
-            widths[self.SEQ_COL] = seq_fixed
 
         # 标星列（始终固定 50px，不拉伸）
         if self.has_star:
@@ -443,19 +414,19 @@ class BaseTab:
                 width=50, minwidth=50, stretch=False,
             )
 
-        # 序号列
+        # 序号列：内容宽度 50px，允许拉伸填充
         tree.heading(self.SEQ_COL, text="#", anchor="center")
         tree.column(
             self.SEQ_COL, anchor="center",
-            width=widths[self.SEQ_COL], minwidth=50, stretch=False,
+            width=50, minwidth=50, stretch=True,
         )
 
-        # 数据列
+        # 数据列：按内容宽度设置 width/minwidth，全部 stretch=True 自动填充
         for col in data_cols:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
-            w = widths.get(col, 160)
-            tree.column(col, anchor="center", width=w, minwidth=80, stretch=False)
+            w = content_widths.get(col, 160)
+            tree.column(col, anchor="center", width=w, minwidth=w, stretch=True)
 
         # 记录本次同步时的 Treeview 宽度，作为 resize 判断基准
         try:
