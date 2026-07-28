@@ -1,3 +1,17 @@
+2026年7月28日 更新日志 — v2.3.1.7
+
+【修复功能】
+
+修复打包 exe 后 Tab1 列宽未按内容自适应的问题
+- 移除 _sync_widths 中"内容总宽小于容器宽则均分列宽"的逻辑
+- 数据列统一按内容宽度设置 width，stretch=True 由 ttk 自动填充剩余空间
+- 序号列固定 50px，标星列固定 50px，避免被不恰当地拉伸
+
+修复打包 exe 时把本地缓存文件打包进去的问题
+- build.ps1 改为"干净构建"：先复制源码到临时目录，排除 industry_dict.json、industry_overrides.json、merge_rules.json、starred_customers.xlsx、renewal_details.xlsx、gift_channels.xlsx
+- README 增加手动打包前清理缓存文件的提醒
+
+---
 2026年7月28日 更新日志 — v2.3.1.6
 
 【修复功能】

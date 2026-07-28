@@ -398,19 +398,12 @@ class BaseTab:
         self._sync_widths(df)
 
     def _sync_widths(self, df: pd.DataFrame) -> None:
-        """按当前 Treeview 宽度重新设置各列宽度和 stretch。"""
+        """按内容自适应设置列宽；窗口有剩余空间时由 stretch 均分，不足时保留内容宽度。"""
         tree = self.tree
         data_cols = list(df.columns)
 
         # 内容自适应宽度（数据列）
         content_widths = self._calc_content_widths(df)
-        total_content = sum(content_widths.values())
-
-        # 均分列：序号 + 数据列；标星列固定不参与均分
-        stretch_cols = [self.SEQ_COL] + data_cols
-
-        # 标星列为额外固定宽度
-        star_fixed = 50 if self.has_star else 0
 
         # 获取 Treeview 实际可用宽度（先刷新布局，避免读到 1）
         try:
@@ -419,17 +412,8 @@ class BaseTab:
             if tree_width <= 1:
                 # 当前 Tab 未显示，Treeview 宽度为 1，用父容器宽度估算
                 tree_width = self.master.winfo_width()
-            avail = max(300, tree_width - star_fixed - 16)
         except Exception:
-            avail = 1200
-
-        # 列始终允许拉伸，宽度按"能均分则均分，否则按内容"设置
-        if total_content + 50 <= avail:
-            per_col = max(80, avail // len(stretch_cols))
-            widths = {col: per_col for col in stretch_cols}
-        else:
-            widths = content_widths.copy()
-            widths[self.SEQ_COL] = 50
+            tree_width = 1200
 
         # 标星列（始终固定 50px）
         if self.has_star:
@@ -439,17 +423,18 @@ class BaseTab:
                 width=50, minwidth=50, stretch=False,
             )
 
-        # 序号列
+        # 序号列固定 50px，但允许拉伸
         tree.heading(self.SEQ_COL, text="#", anchor="center")
         tree.column(
             self.SEQ_COL, anchor="center",
-            width=widths[self.SEQ_COL], minwidth=50, stretch=True,
+            width=50, minwidth=50, stretch=True,
         )
 
+        # 数据列按内容宽度设置，stretch=True 会在空间有余时自动填充
         for col in data_cols:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
-            w = widths.get(col, 160)
+            w = content_widths.get(col, 160)
             tree.column(col, anchor="center", width=w, minwidth=80, stretch=True)
 
         # 记录本次同步时的 Treeview 宽度，作为 resize 判断基准

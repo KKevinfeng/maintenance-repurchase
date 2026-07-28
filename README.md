@@ -82,4 +82,9 @@ python main.py
 python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=tk-inter --include-package-data=customtkinter --include-data-files="CHANGELOG.txt=CHANGELOG.txt" --include-data-files="README.md=README.md" --remove-output --output-dir=dist main.py
 ```
 
-> **打包说明**：使用 Nuitka 打包为独立 exe，输出到 `dist\` 目录。不要使用 PyInstaller，会导致 customtkinter 主题问题。
+> **打包说明**：
+> - 使用 Nuitka 打包为独立 exe，输出到 `dist\` 目录。
+> - 不要使用 PyInstaller，会导致 customtkinter 主题问题。
+> - 推荐用 `build.ps1` 打包，它会自动在临时干净目录构建，避免把本地缓存文件（`industry_dict.json`、`industry_overrides.json`、`*_cache.xlsx` 等）打包进 exe。
+> - 若手动打包，请先把以下运行时自动生成的文件从项目目录移走：
+>   `industry_dict.json`、`industry_overrides.json`、`merge_rules.json`、`starred_customers.xlsx`、`renewal_details.xlsx`、`gift_channels.xlsx`。
