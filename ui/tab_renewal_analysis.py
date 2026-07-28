@@ -439,7 +439,7 @@ class RenewalAnalysisTab:
             return
 
         # 收集产品名称、产品型号、产品模块
-        lines = []
+        product_lines = []
         for row in matched_rows:
             parts = []
             for col_key in ("产品名称", "产品型号", "产品模块"):
@@ -455,42 +455,66 @@ class RenewalAnalysisTab:
                 parts.append(val)
             line = " | ".join(parts)
             if line.strip("| "):
-                lines.append(line)
+                product_lines.append(line)
 
-        if not lines:
-            messagebox.showinfo(
-                "产品明细",
-                f"合同编码: {contract}\n客户: {customer}\n\n匹配到的行无产品信息。",
-                parent=self.frame,
-            )
-            return
+        # 收集续保明细：合同编码 + 客户名称 匹配，展示 续保合同 | 续保金额
+        renewal_lines = []
+        for old, new, cust in self._renewal_details:
+            if old != contract:
+                continue
+            map_cust = cust.strip() if cust else ""
+            if map_cust and map_cust != customer:
+                continue
+            amount = self._lookup_main_amount(new)
+            renewal_lines.append(f"{new} | {amount}")
 
-        text = "\n".join(f"{i}. {line}" for i, line in enumerate(lines, 1))
+        product_text = "\n".join(f"{i}. {line}" for i, line in enumerate(product_lines, 1)) if product_lines else "无产品明细"
+        renewal_text = "\n".join(f"{i}. {line}" for i, line in enumerate(renewal_lines, 1)) if renewal_lines else "无续保明细"
 
         dlg = ctk.CTkToplevel(self.frame)
-        dlg.title(f"产品明细 - {contract}")
-        dlg.geometry("700x400")
+        dlg.title(f"合同明细 - {contract}")
+        dlg.geometry("700x550")
         dlg.resizable(True, True)
-        dlg.minsize(400, 250)
+        dlg.minsize(500, 400)
         dlg.transient(self.frame)
         dlg.grab_set()
-        center_window(dlg, 700, 400)
+        center_window(dlg, 700, 550)
 
         header = ctk.CTkLabel(
             dlg,
-            text=f"合同编码: {contract}    客户: {customer}    共 {len(lines)} 条",
+            text=f"合同编码: {contract}    客户: {customer}",
             font=FONT_BOLD,
             anchor="w",
         )
         header.pack(fill=tk.X, padx=16, pady=(12, 4))
 
-        text_box = tk.Text(
+        # ── 产品明细 ──
+        product_label = ctk.CTkLabel(
+            dlg, text=f"产品明细（共 {len(product_lines)} 条）", font=FONT_BOLD, anchor="w",
+        )
+        product_label.pack(fill=tk.X, padx=16, pady=(8, 2))
+
+        product_box = tk.Text(
             dlg, wrap=tk.WORD, font=("Microsoft YaHei UI", 11),
             relief=tk.FLAT, borderwidth=0,
         )
-        text_box.insert("1.0", text)
-        text_box.configure(state="disabled")
-        text_box.pack(fill=tk.BOTH, expand=True, padx=16, pady=(4, 12))
+        product_box.insert("1.0", product_text)
+        product_box.configure(state="disabled")
+        product_box.pack(fill=tk.BOTH, expand=True, padx=16, pady=(2, 8))
+
+        # ── 续保明细 ──
+        renewal_label = ctk.CTkLabel(
+            dlg, text=f"续保明细（共 {len(renewal_lines)} 条）", font=FONT_BOLD, anchor="w",
+        )
+        renewal_label.pack(fill=tk.X, padx=16, pady=(8, 2))
+
+        renewal_box = tk.Text(
+            dlg, wrap=tk.WORD, font=("Microsoft YaHei UI", 11),
+            relief=tk.FLAT, borderwidth=0,
+        )
+        renewal_box.insert("1.0", renewal_text)
+        renewal_box.configure(state="disabled")
+        renewal_box.pack(fill=tk.BOTH, expand=True, padx=16, pady=(2, 12))
 
         ctk.CTkButton(
             dlg, text="关闭", command=dlg.destroy,
