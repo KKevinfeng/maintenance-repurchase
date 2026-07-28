@@ -75,5 +75,11 @@ maintenance-repurchase-1/
 python main.py
 
 # 打包为 exe（Nuitka）
-python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=tk-inter --include-package-data=customtkinter --remove-output --output-dir=dist main.py
+# 方式一：使用项目自带脚本（推荐）
+.\build.ps1
+
+# 方式二：手动执行
+python -m nuitka --standalone --windows-console-mode=disable --enable-plugin=tk-inter --include-package-data=customtkinter --include-data-files="CHANGELOG.txt=CHANGELOG.txt" --include-data-files="README.md=README.md" --remove-output --output-dir=dist main.py
 ```
+
+> **打包说明**：使用 Nuitka 打包为独立 exe，输出到 `dist\` 目录。不要使用 PyInstaller，会导致 customtkinter 主题问题。

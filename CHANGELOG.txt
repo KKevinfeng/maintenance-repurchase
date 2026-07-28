@@ -1,3 +1,17 @@
+2026年7月28日 更新日志 — v2.3.1.5
+
+【优化功能】
+
+打包体系完善
+- 新增 build.ps1 打包脚本，自动检测 workbuddy Python 环境
+- 精简打包命令，移除运行时自动生成的缓存文件（industry_dict.json、industry_overrides.json）
+- 打包时附带 CHANGELOG.txt 和 README.md，方便客户查阅
+
+.gitignore 完善
+- 新增 gift_channels.xlsx、renewal_details.xlsx、industry_dict.json、industry_overrides.json
+- 避免用户本地缓存文件误提交到仓库
+
+---
 2026年7月28日 更新日志 — v2.3.1.4
 
 【优化功能】

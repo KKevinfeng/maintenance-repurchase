@@ -9,4 +9,8 @@ dist/
 .vscode/
 logs/
 merge_rules.json
+industry_dict.json
+industry_overrides.json
 starred_customers.xlsx
+gift_channels.xlsx
+renewal_details.xlsx
