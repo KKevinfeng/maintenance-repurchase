@@ -267,18 +267,29 @@ class BaseTab:
             return f"{val:,}"
         return str(val)
 
+    def _measure_font(self) -> tk.font.Font:
+        """获取 Treeview 实际使用字体，用于精确计算文字像素宽度。"""
+        try:
+            return tk.font.Font(family="Microsoft YaHei UI", size=12)
+        except Exception:
+            return tk.font.Font(font=("Microsoft YaHei", 12))
+
     def _estimate_text_width(self, text: str) -> int:
-        """估算文字像素宽度：中文 ~14px，英文/数字 ~7px，其他 ~10px。"""
-        width = 0
-        for ch in str(text):
-            code = ord(ch)
-            if 0x4E00 <= code <= 0x9FFF or 0x3000 <= code <= 0x303F or 0xFF00 <= code <= 0xFFEF:
-                width += 14
-            elif code < 128:
-                width += 7
-            else:
-                width += 10
-        return width
+        """估算文字像素宽度，优先用实际字体度量，失败则回退到经验值。"""
+        try:
+            font = self._measure_font()
+            return font.measure(str(text))
+        except Exception:
+            width = 0
+            for ch in str(text):
+                code = ord(ch)
+                if 0x4E00 <= code <= 0x9FFF or 0x3000 <= code <= 0x303F or 0xFF00 <= code <= 0xFFEF:
+                    width += 14
+                elif code < 128:
+                    width += 7
+                else:
+                    width += 10
+            return width
 
     def _calc_content_widths(self, df: pd.DataFrame) -> dict[str, int]:
         """按每列最长内容计算像素宽度，返回 {列名: 像素宽}。"""
@@ -294,8 +305,8 @@ class BaseTab:
                 px = self._estimate_text_width(cell_text)
                 if px > max_px:
                     max_px = px
-            # 加 28px 内边距，最小 60px
-            widths[col] = max(60, max_px + 28)
+            # 加 28px 内边距，最小 80px（避免打包后字体回退导致列宽被压得过窄）
+            widths[col] = max(80, max_px + 28)
         return widths
 
     # ── 数据计算（子类实现） ────────────────────────────────
@@ -338,6 +349,9 @@ class BaseTab:
 
             tag = "odd" if idx % 2 == 1 else "even"
             self.tree.insert("", tk.END, values=values, tags=(tag, "center"))
+
+        # 打包成 exe 后，Treeview 首次布局时可能尚未拿到真实宽度；延迟重算一次列宽
+        self.frame.after(100, lambda: self._sync_widths(df))
 
     # ── 列同步 ──────────────────────────────────────────────
 
@@ -436,7 +450,7 @@ class BaseTab:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
             w = widths.get(col, 160)
-            tree.column(col, anchor="center", width=w, minwidth=60, stretch=True)
+            tree.column(col, anchor="center", width=w, minwidth=80, stretch=True)
 
         # 记录本次同步时的 Treeview 宽度，作为 resize 判断基准
         try:

@@ -1,3 +1,13 @@
+2026年7月28日 更新日志 — v2.3.1.6
+
+【修复功能】
+
+修复打包 exe 后 Tab1 列宽被压缩的问题
+- _estimate_text_width 改为优先使用 tk.font.Font 实际度量字体宽度
+- _calc_content_widths 最小列宽从 60 提升至 80px
+- _fill_tree 增加 100ms 延迟重算列宽，确保 Treeview 布局完成后再测量
+
+---
 2026年7月28日 更新日志 — v2.3.1.5
 
 【优化功能】
