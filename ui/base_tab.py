@@ -398,12 +398,43 @@ class BaseTab:
         self._sync_widths(df)
 
     def _sync_widths(self, df: pd.DataFrame) -> None:
-        """按内容自适应设置列宽；"名称"列可拉伸填充剩余空间，其余列固定按内容显示。"""
+        """按内容自适应设置列宽：非名称列固定内容宽度，名称列填充剩余空间（不会被压缩）。"""
         tree = self.tree
         data_cols = list(df.columns)
 
         # 内容自适应宽度（数据列）
         content_widths = self._calc_content_widths(df)
+
+        # 固定列宽度
+        star_fixed = 50 if self.has_star else 0
+        seq_fixed = 50
+
+        # 获取 Treeview 实际可用宽度
+        try:
+            self.master.update_idletasks()
+            tree_width = self.tree.winfo_width()
+            if tree_width <= 1:
+                tree_width = self.master.winfo_width()
+            # 减去滚动条/边距预留
+            avail = max(300, tree_width - star_fixed - seq_fixed - 16)
+        except Exception:
+            avail = 1200
+
+        # 找出名称列（最多一个），其余为非拉伸列
+        name_col: str | None = None
+        non_name_total = 0
+        for col in data_cols:
+            if name_col is None and "名称" in col:
+                name_col = col
+            else:
+                non_name_total += content_widths.get(col, 160)
+
+        # 名称列宽度：优先填充剩余空间，但不会小于自身内容宽度
+        if name_col:
+            name_content_w = content_widths.get(name_col, 160)
+            name_width = max(name_content_w, avail - non_name_total)
+        else:
+            name_width = 0
 
         # 标星列（始终固定 50px，不拉伸）
         if self.has_star:
@@ -420,14 +451,15 @@ class BaseTab:
             width=50, minwidth=50, stretch=False,
         )
 
-        # 数据列按内容宽度设置：名称列允许拉伸，其余列固定宽度
+        # 数据列：名称列手动分配宽度并 stretch=False，防止被 ttk 压缩；其余列按内容宽度
         for col in data_cols:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
-            w = content_widths.get(col, 160)
-            # 名称类列允许拉伸以填充窗口剩余空间；数字/年份列固定宽度
-            stretch = "名称" in col
-            tree.column(col, anchor="center", width=w, minwidth=80, stretch=stretch)
+            if col == name_col:
+                tree.column(col, anchor="center", width=name_width, minwidth=80, stretch=False)
+            else:
+                w = content_widths.get(col, 160)
+                tree.column(col, anchor="center", width=w, minwidth=80, stretch=False)
 
         # 记录本次同步时的 Treeview 宽度，作为 resize 判断基准
         try:
