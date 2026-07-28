@@ -398,24 +398,14 @@ class BaseTab:
         self._sync_widths(df)
 
     def _sync_widths(self, df: pd.DataFrame) -> None:
-        """按内容自适应设置列宽；窗口有剩余空间时由 stretch 均分，不足时保留内容宽度。"""
+        """按内容自适应设置列宽；"名称"列可拉伸填充剩余空间，其余列固定按内容显示。"""
         tree = self.tree
         data_cols = list(df.columns)
 
         # 内容自适应宽度（数据列）
         content_widths = self._calc_content_widths(df)
 
-        # 获取 Treeview 实际可用宽度（先刷新布局，避免读到 1）
-        try:
-            self.master.update_idletasks()
-            tree_width = self.tree.winfo_width()
-            if tree_width <= 1:
-                # 当前 Tab 未显示，Treeview 宽度为 1，用父容器宽度估算
-                tree_width = self.master.winfo_width()
-        except Exception:
-            tree_width = 1200
-
-        # 标星列（始终固定 50px）
+        # 标星列（始终固定 50px，不拉伸）
         if self.has_star:
             tree.heading(self.STAR_COL, text="★", anchor="center")
             tree.column(
@@ -423,19 +413,21 @@ class BaseTab:
                 width=50, minwidth=50, stretch=False,
             )
 
-        # 序号列固定 50px，但允许拉伸
+        # 序号列固定 50px，不拉伸
         tree.heading(self.SEQ_COL, text="#", anchor="center")
         tree.column(
             self.SEQ_COL, anchor="center",
-            width=50, minwidth=50, stretch=True,
+            width=50, minwidth=50, stretch=False,
         )
 
-        # 数据列按内容宽度设置，stretch=True 会在空间有余时自动填充
+        # 数据列按内容宽度设置：名称列允许拉伸，其余列固定宽度
         for col in data_cols:
             tree.heading(col, text=col, anchor="center")
             tree.heading(col, command=lambda c=col: self._on_header_click(c))
             w = content_widths.get(col, 160)
-            tree.column(col, anchor="center", width=w, minwidth=80, stretch=True)
+            # 名称类列允许拉伸以填充窗口剩余空间；数字/年份列固定宽度
+            stretch = "名称" in col
+            tree.column(col, anchor="center", width=w, minwidth=80, stretch=stretch)
 
         # 记录本次同步时的 Treeview 宽度，作为 resize 判断基准
         try:
