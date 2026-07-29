@@ -13,7 +13,6 @@ maintenance-repurchase-1/
 ├── requirements.txt                # Python 依赖清单
 ├── build.ps1                       # Nuitka 打包脚本（自动检测 Python 环境）
 ├── CHANGELOG.txt                   # 版本更新日志
-├── RELEASE.md                      # 发版指引（版本规则、更新清单）
 │
 ├── merge_rules.json                # 产品合并规则持久化文件
 ├── industry_dict.json              # 行业数据字典（一级/二级行业映射）

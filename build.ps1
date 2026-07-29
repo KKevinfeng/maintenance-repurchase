@@ -41,7 +41,6 @@ $sourceItems = @(
     "requirements.txt",
     "CHANGELOG.txt",
     "README.md",
-    "RELEASE.md",
     "ui"
 )
 
