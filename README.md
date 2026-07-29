@@ -12,6 +12,7 @@ maintenance-repurchase-1/
 ├── utils.py                        # 工具函数（合同编号解析、产品行拆分、年份提取、CSV 导出）
 ├── requirements.txt                # Python 依赖清单
 ├── CHANGELOG.txt                   # 版本更新日志
+├── RELEASE.md                      # 发版指引（版本规则、更新清单）
 │
 ├── merge_rules.json                # 产品合并规则持久化文件
 ├── industry_dict.json              # 行业数据字典（一级/二级行业映射）
@@ -62,6 +63,7 @@ maintenance-repurchase-1/
 | Tab4 | 过保数据分析 | P类合同续保追踪、大礼包渠道红色高亮标记 |
 | Tab5 | 产品销量统计 | 按产品名称汇总售卖台数，支持产品名称合并 |
 | Tab6 | 行业统计 | 按一级行业统计客户数量、总金额及分年金额，支持下钻到二级行业和客户明细 |
+| Tab7 | 客户画像 | 展示客户综合画像，含行业分类、标签等完整信息 |
 
 ## 运行环境
 

@@ -1,3 +1,19 @@
+2026年7月29日 更新日志 — v2.3.1.12
+
+【修复功能】
+
+行业覆盖规则在客户详情弹窗中生效
+- Tab1/Tab2 双击客户弹出详情窗口时，一级行业和二级行业统一应用 Tab6 的行业覆盖规则
+- 修复详情弹窗显示的是原始数据，与行业统计页不一致的问题
+- 涉及文件：ui/main_window.py（_show_customer_detail 内增加 apply_overrides）
+
+【优化功能】
+
+build.ps1 增加 UTF-8 编码设定
+- 脚本头部增加 chcp 65001 + [Console]::OutputEncoding 设 UTF-8
+- 增加文件 BOM 编码提醒注释，避免 PowerShell 5.x 中文乱码
+
+---
 2026年7月28日 更新日志 — v2.3.1.11
 
 【修复功能】

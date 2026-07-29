@@ -28,6 +28,7 @@ from ui.starred_cache import StarredCache
 from ui.starred_view import StarredView
 from ui.starred_input_dialog import StarredInputDialog
 from ui.progress_popup import ProgressPopup
+from ui.industry_overrides import apply_overrides
 from utils import classify_contract, center_window
 
 
@@ -317,7 +318,7 @@ class MaintenanceApp:
         ).pack(pady=(0, 16))
 
         ctk.CTkLabel(
-            frame, text="版本信息：2.3.1.11", font=FONT_MAIN,
+            frame, text="版本信息：2.3.1.12", font=FONT_MAIN,
             anchor="w", justify="left",
         ).pack(anchor="w", pady=(0, 6), fill=tk.X)
 
@@ -635,6 +636,9 @@ class MaintenanceApp:
         if customer_df.empty:
             messagebox.showinfo("提示", f'未找到客户"{customer_name}"的合同记录')
             return
+
+        # 应用 Tab6 中设置的行业覆盖规则，保证详情弹窗与行业统计一致
+        customer_df = apply_overrides(customer_df)
 
         if contract_type:
             customer_df["_type"] = customer_df["合同编号*"].apply(classify_contract)

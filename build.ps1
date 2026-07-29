@@ -1,11 +1,19 @@
-# Build script: 使用 Nuitka 打包为 exe
+﻿# Build script: 使用 Nuitka 打包为 exe
 # 要求: Python 3.10+ 且已安装 Nuitka (pip install nuitka)
 # 输出: dist\main.dist\main.exe
 #
 # 说明：本脚本会先复制源码到一个干净的临时目录，排除运行时自动生成的缓存文件，
 #      避免把用户本地数据（industry_dict.json、续保明细等）打包进 exe。
+#
+# 注意：本脚本必须保存为 UTF-8 with BOM 编码，否则 PowerShell 5.x 会乱码。
+#       VS Code 右下角编码 → "Save with Encoding" → UTF-8 with BOM
 
 $ErrorActionPreference = "Stop"
+
+# 强制控制台 UTF-8 编码，防止中文乱码
+chcp 65001 > $null
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
 
 # 优先查找 workbuddy 自带的 Python（已预装 Nuitka）
 $workbuddyPython = "$env:USERPROFILE\.workbuddy\binaries\python\versions\3.14.3\python.exe"
@@ -33,6 +41,7 @@ $sourceItems = @(
     "requirements.txt",
     "CHANGELOG.txt",
     "README.md",
+    "RELEASE.md",
     "ui"
 )
 
