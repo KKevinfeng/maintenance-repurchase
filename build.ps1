@@ -74,15 +74,30 @@ try {
         throw "Nuitka 打包失败，退出码: $LASTEXITCODE"
     }
 
+    # 提取版本号（从 main_window.py 中读取）
+    $versionFile = Join-Path (Join-Path $buildDir "ui") "main_window.py"
+    $versionMatch = Select-String -Path $versionFile -Pattern '版本信息：([\d.]+)' | Select-Object -First 1
+    if ($versionMatch) {
+        $version = $versionMatch.Matches.Groups[1].Value
+        $versionDir = "v$version"
+    } else {
+        $versionDir = "main.dist"
+        Write-Warning "无法提取版本号，使用默认目录名"
+    }
+
     # 把生成的 dist 目录复制回项目根目录
     $srcDist = Join-Path $buildDir "dist"
     $dstDist = Join-Path $projectDir "dist"
-    if (Test-Path $dstDist) {
-        Remove-Item -Recurse -Force $dstDist
-    }
-    Copy-Item -Path $srcDist -Destination $dstDist -Recurse -Force
 
-    Write-Host "打包完成! 输出目录: $dstDist\main.dist\" -ForegroundColor Green
+    # 直接复制 main.dist 并重命名为版本号目录
+    $srcMainDist = Join-Path $srcDist "main.dist"
+    $newDir = Join-Path $dstDist $versionDir
+    if (Test-Path $newDir) {
+        Remove-Item -Recurse -Force $newDir
+    }
+    Copy-Item -Path $srcMainDist -Destination $newDir -Recurse -Force
+
+    Write-Host "打包完成! 输出目录: $newDir\" -ForegroundColor Green
 } finally {
     Pop-Location
     Write-Host "清理临时构建目录..." -ForegroundColor Cyan
