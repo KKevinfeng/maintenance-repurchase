@@ -34,7 +34,7 @@ maintenance-repurchase-1/
     ├── tab_customer_total.py       # Tab1 — 客户总金额统计（分年透视）
     ├── tab_customer_category.py    # Tab2 — 客户分类金额统计（维保/产品/服务）
     ├── tab_expiry_stats.py         # Tab3 — 过保情况统计（含意向筛选）
-    ├── tab_renewal_analysis.py    # Tab4 — 过保数据分析（P类合同续保追踪、大礼包标记）
+    ├── tab_renewal_analysis.py     # Tab4 — 过保数据分析（P类合同续保追踪、大礼包标记）
     ├── tab_product_sales.py        # Tab5 — 产品销量统计（含产品合并规则）
     ├── tab_industry.py             # Tab6 — 行业统计（客户数/金额/分年，支持下钻）
     ├── tab_customer_profile.py     # Tab7 — 客户画像展示（行业分类、金额、产品偏好）
