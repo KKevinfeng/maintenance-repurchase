@@ -11,6 +11,7 @@ maintenance-repurchase-1/
 ├── data_processor.py               # 核心数据处理逻辑（统计计算、合同分类、年份提取）
 ├── utils.py                        # 工具函数（合同编号解析、产品行拆分、年份提取、CSV 导出）
 ├── requirements.txt                # Python 依赖清单
+├── build.ps1                       # Nuitka 打包脚本（自动检测 Python 环境）
 ├── CHANGELOG.txt                   # 版本更新日志
 ├── RELEASE.md                      # 发版指引（版本规则、更新清单）
 │
@@ -36,6 +37,7 @@ maintenance-repurchase-1/
     ├── tab_renewal_analysis.py    # Tab4 — 过保数据分析（P类合同续保追踪、大礼包标记）
     ├── tab_product_sales.py        # Tab5 — 产品销量统计（含产品合并规则）
     ├── tab_industry.py             # Tab6 — 行业统计（客户数/金额/分年，支持下钻）
+    ├── tab_customer_profile.py     # Tab7 — 客户画像展示（行业分类、金额、产品偏好）
     │
     ├── industry_dict.py            # 行业数据字典管理（增删一级/二级行业）
     ├── industry_overrides.py       # 行业覆盖规则管理（客户行业人工修正）
