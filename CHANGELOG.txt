@@ -1,3 +1,17 @@
+2026年7月29日 更新日志 — v2.3.1.13
+
+【优化功能】
+
+异常日志钩子全覆盖
+- 新增 threading.excepthook 捕获子线程未处理异常，避免 daemon 线程崩溃无记录
+- 新增 install_tkinter_hook 捕获 Tkinter 回调异常（按钮点击、事件处理等）
+- 涉及文件：ui/logger.py（新增钩子）、ui/main_window.py（接入钩子）
+
+屏蔽 openpyxl 样式警告
+- main.py 新增 warnings 过滤，屏蔽 Excel 文件无默认样式的 UserWarning
+- 不影响数据处理，仅去掉终端冗余警告输出
+
+---
 2026年7月29日 更新日志 — v2.3.1.12
 
 【修复功能】

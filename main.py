@@ -3,7 +3,11 @@
 import sys
 import os
 import platform
+import warnings
 from datetime import datetime
+
+# 屏蔽 openpyxl 默认样式警告（不影响数据处理）
+warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl")
 
 # ── 尽早初始化日志 ──────────────────────────────────────────
 from ui.logger import log_info, log_error, install_exception_hook, APP_LOGGER
@@ -45,7 +49,6 @@ def main():
     except Exception as e:
         log_error(f"程序运行异常: {e}")
         raise
-
 
 if __name__ == "__main__":
     main()

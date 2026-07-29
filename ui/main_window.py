@@ -13,7 +13,7 @@ from ui.styles import (
     FONT_MAIN, FONT_SMALL, FONT_BOLD, FONT_TITLE,
     setup_treeview_style,
 )
-from ui.logger import log_error, log_info
+from ui.logger import log_error, log_info, install_tkinter_hook
 from ui.log_view import LogViewer
 from ui.base_tab import BaseTab
 from ui.tab_customer_total import CustomerTotalTab
@@ -46,6 +46,7 @@ class MaintenanceApp:
 
     def __init__(self, root: ctk.CTk):
         self.root = root
+        install_tkinter_hook(root)  # 捕获 Tkinter 回调中的异常到日志
         self.root.title("合同数据处理工具")
         self.root.geometry("1100x700")
         self.root.minsize(900, 500)
@@ -318,7 +319,7 @@ class MaintenanceApp:
         ).pack(pady=(0, 16))
 
         ctk.CTkLabel(
-            frame, text="版本信息：2.3.1.12", font=FONT_MAIN,
+            frame, text="版本信息：2.3.1.13", font=FONT_MAIN,
             anchor="w", justify="left",
         ).pack(anchor="w", pady=(0, 6), fill=tk.X)
 

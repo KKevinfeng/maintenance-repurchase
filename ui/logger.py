@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import threading
 import traceback
 from datetime import datetime
 
@@ -118,13 +119,33 @@ def get_log_dir() -> str:
 # ── 全局异常捕获 ──────────────────────────────────────────────
 
 def install_exception_hook() -> None:
-    """安装全局未捕获异常钩子，确保闪退时日志留有记录。"""
-    def _hook(exc_type, exc_value, exc_tb):
+    """安装全局未捕获异常钩子，覆盖主线程、子线程、Tkinter 回调三个渠道。"""
+
+    # 1. 主线程未捕获异常
+    def _main_hook(exc_type, exc_value, exc_tb):
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_tb)
             return
         tb_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
-        APP_LOGGER.critical(f"未捕获异常:\n{tb_text}")
+        APP_LOGGER.critical(f"主线程未捕获异常:\n{tb_text}")
         sys.__excepthook__(exc_type, exc_value, exc_tb)
 
-    sys.excepthook = _hook
+    sys.excepthook = _main_hook
+
+    # 2. 子线程未捕获异常（Python 3.8+）
+    def _thread_hook(args: threading.ExceptHookArgs):
+        tb_text = "".join(traceback.format_exception(
+            args.exc_type, args.exc_value, args.exc_traceback
+        ))
+        APP_LOGGER.critical(f"子线程未捕获异常:\n{tb_text}")
+
+    threading.excepthook = _thread_hook
+
+
+def install_tkinter_hook(root) -> None:
+    """安装 Tkinter 回调异常钩子，覆盖按钮点击、事件处理等场景。"""
+    def _tk_hook(exc_type, exc_value, exc_tb):
+        tb_text = "".join(traceback.format_exception(exc_type, exc_value, exc_tb))
+        APP_LOGGER.error(f"Tkinter 回调异常:\n{tb_text}")
+
+    root.report_callback_exception = _tk_hook
