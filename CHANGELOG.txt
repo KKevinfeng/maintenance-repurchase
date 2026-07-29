@@ -1,3 +1,19 @@
+2026年7月29日 更新日志 — v2.3.1.14
+
+【修复功能】
+
+缓存文件泄露到 GitHub
+- gift_channels.xlsx、industry_dict.json、industry_overrides.json、renewal_details.xlsx 已从 git 追踪中移除
+- .gitignore 早已声明忽略，但因历史原因未生效，现已修复
+- 本地文件完好，后续新增缓存不再被跟踪
+
+【文档更新】
+
+README 项目结构补全
+- 新增 build.ps1 打包脚本条目
+- 新增 ui/tab_customer_profile.py Tab7 客户画像条目
+
+---
 2026年7月29日 更新日志 — v2.3.1.13
 
 【优化功能】
